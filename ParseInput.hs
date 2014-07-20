@@ -69,8 +69,9 @@ instance Show UnaryOperator where
 -- | Associate names with unary functions.
 unaryTable :: [UnaryOperator]
 unaryTable =
-  map UnaryOperator [("-",   liftM negate, stringPrefix "-"),
-                     ("abs", liftM abs,   stringPrefix "abs")]
+  map UnaryOperator [("-",   liftM negate,     stringPrefix "-"),
+                     ("abs", liftM abs,        stringPrefix "abs"),
+                     ("not", liftM (xor 1),    stringPrefix "not")]
   where stringPrefix p s = p ++ "(" ++ s ++ ")"
 
 -- | Given a 'UnaryOperator' and a parser that produces a
@@ -204,7 +205,7 @@ allColumnNames = (allInputNames, allOutputNames)
         allInputNames = alphabet ++ [before ++ c |
                                      before <- allInputNames,
                                      c <- alphabet]
-        allOutputNames = map (\n -> "f_" ++ show n) [1..]
+        allOutputNames = map (\n -> "f" ++ show n) [1..]
 
 -- | Parse one row of inputs and output column names of the form
 -- \"@columns:@ /i1/ /i2/ /i3/ &#x2026; @=>@ /o1/ /o2/ /o3/ &#x2026;\".
@@ -324,9 +325,9 @@ entireInput = do { skipMany space
                  ; skipMany space
                  ; b <- option binaryTable binaries
                  ; skipMany space
-                 ; c <- maybeMatch constants
+                 ; c <- maybeMatch $ try constants
                  ; skipMany space
-                 ; n <- maybeMatch columnNames
+                 ; n <- maybeMatch $ try columnNames
                  ; skipMany space
                  ; io <- inputsOutputs
                  ; skipMany space

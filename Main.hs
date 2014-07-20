@@ -1,4 +1,18 @@
-module Main where
+{-|
+Module      : Main
+Description : Read a description of expressions to find and find them
+Copyright   : (c) Scott Pakin, 2014
+License     : GPL-3
+Maintainer  : scott-fexpr@pakin.org
+Stability   : experimental
+Portability : portable
+
+This file provides the top-level processing for the /findexpr/
+program.  It reads a problem description from the standard input
+device and writes the results to the standard output device.
+-}
+
+module Main (main) where
 
 import Data.List
 import System.Environment
@@ -22,11 +36,15 @@ produceFindExprArgs :: ParsedInput
                         [String], [String],
                         Permutation)
 produceFindExprArgs parseInfo =
-  (unOps, binOps, inputs, outputs, inColNames, outColNames, Repeated)
+  (unOps, binOps, inputs, outputs, inColNames, adornedOutColNames, Repeated)
   where unOps = unaryFuncs parseInfo
         binOps = binaryFuncs parseInfo
         (inputs, outputs) = unzip $ dataTable parseInfo
         (inColNames, outColNames) = colNames parseInfo
+        consts = constVals parseInfo
+        numArgs = length inColNames - length consts
+        argList = "(" ++ intercalate "," (take numArgs inColNames) ++ ")"
+        adornedOutColNames = map (++ argList) outColNames
 
 -- | Convert an 'Integer' to an 'Int', returning the original number
 -- if it's not representable by an 'Int'.
@@ -75,12 +93,17 @@ formatOutputs oss ns =
   where formatOutputs' [] [] = ""
         formatOutputs' os n = concatMap (\o -> n ++ " = " ++ o ++ "\n") os
 
+-- | Remove comments (\"@#@\" to end of line) from an input stream.
+removeComments :: String -> String
+removeComments = unlines . map removeCommentsFromLine . lines
+  where removeCommentsFromLine = takeWhile (/= '#')
+
 main =
   do
     -- Parse the input file.
     progName <- getErrorMessageName
     problemText <- getContents
-    let possibleParse = parse entireInput progName problemText
+    let possibleParse = parse entireInput progName $ removeComments problemText
     problemInfo <- case possibleParse of Left errMsg  -> fail $ show errMsg
                                          Right record -> return record
 
