@@ -1,0 +1,31 @@
+# Find a binary function that accepts a 4-bit number, n, and return
+# the nth bit of the 16-bit, big-endian word 0101001101010000 ("SP").
+#
+# Note: A Karnaugh map is a much better solution technique than
+# findexpr.
+
+unary ops:  not
+binary ops: and or
+constants:
+
+columns: b3 b2 b1 b0 => f
+
+# "S"
+1 1 1 1 => 0
+1 1 1 0 => 1
+1 1 0 1 => 0
+1 1 0 0 => 1
+1 0 1 1 => 0
+1 0 1 0 => 0
+1 0 0 1 => 1
+1 0 0 0 => 1
+
+# "P"
+0 1 1 1 => 0
+0 1 1 0 => 1
+0 1 0 1 => 0
+0 1 0 0 => 1
+0 0 1 1 => 0
+0 0 1 0 => 0
+0 0 0 1 => 0
+0 0 0 0 => 0
