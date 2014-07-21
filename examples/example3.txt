@@ -1,0 +1,8 @@
+# This is a trivial example to use for experimentation with different
+# values of "allow reps" and "require all".
+
+constants:
+allow reps:  yes
+require all: no
+
+1 2 3 4 => 24

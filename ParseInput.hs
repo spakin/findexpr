@@ -32,6 +32,7 @@ module ParseInput ( UnaryOperator(..)
                   , BinaryOperator(..)
                   , ParsedInput(..)
                   , entireInput
+                  , Permutation(..)
                   ) where
 
 import Control.Monad
@@ -168,6 +169,46 @@ binaries = do { string "binary"
 
 ---------------------------------------------------------------------------
 
+-- | Specify different forms of permutations to generate.  For
+-- example, given @[\'A\', \'B\', \'C\']@, 'Repeated' represents
+-- @[\"A\", \"B\", \"C\", \"AA\", \"AB\", \"AC\", \"BA\", \"BB\",
+-- \"BC\", \"CA\", \"CB\", \"CC\", &#x2026;]@ (continuing forever);
+-- 'Unique' represents @[\"A\", \"B\", \"C\", \"AB\", \"BA\", \"CB\",
+-- \"BC\", \"CA\", \"AC\", \"ABC\", \"BAC\", \"CBA\", \"BCA\",
+-- \"CAB\", \"ACB\"]@; and 'UniqueAllPresent' represents only
+-- @[\"ABC\", \"BAC\", \"CBA\", \"BCA\", \"CAB\", \"ACB\"]@.
+data Permutation = Repeated           -- ^ Values are allowed to repeat
+                 | Unique             -- ^ Values are not allowed to repeat
+                 | RepeatedAllPresent -- ^ Same as 'Repeated' but all values must be present
+                 | UniqueAllPresent   -- ^ Same as 'Unique' but all values must be present
+                 deriving Eq
+
+-- | Parse \"@allow reps:@\" followed by either \"@yes@\" or \"@no@\".
+repeatedVals :: Parser Bool
+repeatedVals = do { string "allow reps:"
+                  ; skipMany separators
+                  ; do { string "yes"
+                       ; return True
+                       }
+                    <|>
+                    do { string "no"
+                       ; return False
+                       }
+                  }
+
+-- | Parse \"@require all:@\" followed by either \"@yes@\" or \"@no@\".
+allPresent :: Parser Bool
+allPresent = do { string "require all:"
+                ; skipMany separators
+                ; do { string "yes"
+                     ; return True
+                     }
+                  <|>
+                  do { string "no"
+                     ; return False
+                     }
+                }
+
 -- | Parse a list of space-separated integer constants beginning with
 -- \"@constants:@\".
 constants :: Parser [Integer]
@@ -301,10 +342,26 @@ number base baseDigit =
 -- for convenient access.
 data ParsedInput = ParsedInput { unaryFuncs  :: [UnaryOperator]          -- ^ List of unary operators
                                , binaryFuncs :: [BinaryOperator]         -- ^ List of binary operators
+                               , permType    :: Permutation              -- ^ How input columns and column names should be permuted
                                , constVals   :: [Integer]                -- ^ List of constants to append to each column of inputs and input names
                                , colNames    :: ([String], [String])     -- ^ Lists of input column names and output column names
                                , dataTable   :: [([Integer], [Integer])] -- ^ Rows of data table, each mapping inputs to outputs
                                }
+
+-- | Output a 'ParsedInput' in a format that can be used as program input.
+instance Show ParsedInput where
+  show p = "unary ops: " ++ showList (unaryFuncs p) ++ "\n" ++
+           "binary ops: " ++ showList (binaryFuncs p) ++ "\n" ++
+           "constants: " ++ showList (constVals p) ++ "\n" ++
+           "allow reps: " ++ (if reps then "yes" else "no") ++ "\n" ++
+           "require all: " ++ (if reqAll then "yes" else "no") ++ "\n" ++
+           "columns: " ++ (filter (\c -> c /= '"') $ showInsOuts $ colNames p) ++
+           concatMap showInsOuts (dataTable p)
+    where perm = permType p
+          reps = perm == Repeated || perm == RepeatedAllPresent
+          reqAll = perm == UniqueAllPresent || perm == RepeatedAllPresent
+          showInsOuts (ins, outs) = (showList ins) ++ " => " ++ (showList outs) ++ "\n"
+          showList lst = intercalate " " $ map show lst
 
 -- | The entire input to parse is expected to be of the form
 --
@@ -313,6 +370,12 @@ data ParsedInput = ParsedInput { unaryFuncs  :: [UnaryOperator]          -- ^ Li
 --     * Binary operators (\"@binary ops:@ &#x2026;\", default: 'allBinaries')
 --
 --     * Constants (\"@constants:@ &#x2026;\", default: @1@)
+--
+--     * Repeated or unique permutations (\"@allow reps:@
+--       @yes@|@no@\", default: 'True')
+--
+--     * Permutations requiring all values (\"@require all:@
+--       @yes@|@no@\", default: 'False')
 --
 --     * Column names (\"@columns:@ \"/i1/ /i2/ /i3/ &#x2026; @=>@
 --       /o1/ /o2/ /o3/ &#x2026;\")
@@ -327,12 +390,16 @@ entireInput = do { skipMany space
                  ; skipMany space
                  ; c <- maybeMatch $ try constants
                  ; skipMany space
+                 ; r <- option True repeatedVals
+                 ; skipMany space
+                 ; a <- option False allPresent
+                 ; skipMany space
                  ; n <- maybeMatch $ try columnNames
                  ; skipMany space
                  ; io <- inputsOutputs
                  ; skipMany space
                  ; eof
-                 ; case validateInputs u b c n io of
+                 ; case validateInputs u b c r a n io of
                    (Right parsing) -> return parsing
                    (Left errMsg)   -> fail errMsg
                  }
@@ -356,10 +423,15 @@ provideColumnNames numIn numOut given = (iNames, oNames)
 
 -- | Postprocess and package up a set of parsed values into a
 -- 'ParsedInput' if the values are valid or an error message if not.
-validateInputs :: [UnaryOperator] -> [BinaryOperator] -> Maybe [Integer] ->
-                  Maybe ([String], [String]) -> [([Integer], [Integer])] ->
-                  Either String ParsedInput
-validateInputs uFuncs bFuncs cVals cNames dTable =
+validateInputs :: [UnaryOperator]             -- ^ Subset of unary operators to consider
+               -> [BinaryOperator]            -- ^ Subset of binary operators to consider
+               -> Maybe [Integer]             -- ^ List of constants, if provided
+               -> Bool                        -- ^ 'True' = allow variables to be used more than once
+               -> Bool                        -- ^ 'True' = require variables to be used at least once
+               -> Maybe ([String], [String])  -- ^ List of input and output column names, if provided
+               -> [([Integer], [Integer])]    -- ^ List of pairs associating inputs with outputs
+               -> Either String ParsedInput   -- ^ A 'ParsedInput' if the above are valid or an error message if invalid
+validateInputs uFuncs bFuncs cVals reps all cNames dTable =
   do { failIf (not $ sameLength inputRows) "Input rows have differing numbers of columns"
      ; failIf (not $ sameLength outputRows) "Output rows have differing numbers of columns"
      ; failIf (length inputColNames /= numInputs) "Not every column of input was given a name"
@@ -367,6 +439,7 @@ validateInputs uFuncs bFuncs cVals cNames dTable =
      ; return $ ParsedInput {unaryFuncs  = uFuncs,
                              binaryFuncs = bFuncs,
                              constVals   = constantVals,
+                             permType    = valueUsage,
                              colNames    = (inputColNames ++ constColNames, outputColNames),
                              dataTable   = dataVals}
      }
@@ -375,6 +448,10 @@ validateInputs uFuncs bFuncs cVals cNames dTable =
         numInputs = length $ head inputRows
         numOutputs = length $ head outputRows
         (inputColNames, outputColNames) = provideColumnNames numInputs numOutputs cNames
+        valueUsage = case (reps, all) of (False, False) -> Unique
+                                         (False, True)  -> UniqueAllPresent
+                                         (True,  False) -> Repeated
+                                         (True,  True)  -> RepeatedAllPresent
         constantVals = case cVals of Nothing -> [1]
                                      Just nums -> nums
         constColNames = map show constantVals

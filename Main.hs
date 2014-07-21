@@ -36,7 +36,7 @@ produceFindExprArgs :: ParsedInput
                         [String], [String],
                         Permutation)
 produceFindExprArgs parseInfo =
-  (unOps, binOps, inputs, outputs, inColNames, adornedOutColNames, Repeated)
+  (unOps, binOps, inputs, outputs, inColNames, adornedOutColNames, perm)
   where unOps = unaryFuncs parseInfo
         binOps = binaryFuncs parseInfo
         (inputs, outputs) = unzip $ dataTable parseInfo
@@ -45,6 +45,7 @@ produceFindExprArgs parseInfo =
         numArgs = length inColNames - length consts
         argList = "(" ++ intercalate "," (take numArgs inColNames) ++ ")"
         adornedOutColNames = map (++ argList) outColNames
+        perm = permType parseInfo
 
 -- | Convert an 'Integer' to an 'Int', returning the original number
 -- if it's not representable by an 'Int'.
@@ -106,6 +107,7 @@ main =
     let possibleParse = parse entireInput progName $ removeComments problemText
     problemInfo <- case possibleParse of Left errMsg  -> fail $ show errMsg
                                          Right record -> return record
+    putStrLn $ show problemInfo  -- Temporary
 
     -- Convert all 'Integer' values to 'Int' values, or die trying.
     let (unOps, binOps, inputData, outputData, inColNames, outColNames, permType) = produceFindExprArgs problemInfo
@@ -119,4 +121,4 @@ main =
     let firstFewOutputs = map (take exprsToOutput) allOutputs
 
     -- Display all of the expressions we found.
-    putStr $ formatOutputs firstFewOutputs  outColNames
+    putStr $ formatOutputs firstFewOutputs outColNames

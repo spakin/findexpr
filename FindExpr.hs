@@ -12,9 +12,7 @@ inputs to an output value for all given lists of inputs and all given
 output values.
 -}
 
-module FindExpr ( findAllExpressions
-                , Permutation(..)
-                ) where
+module FindExpr ( findAllExpressions ) where
 
 import ParseInput
 import Data.List
@@ -138,18 +136,6 @@ permuteInputs unique inputs colNames numVals =
 validateTree :: (Eq a) => (Tree (a -> a) (a -> a -> a)) -> ([a], a) -> Bool
 validateTree tree (inputs, output) = evaluateTree tree inputs == output
 
--- | Specify different forms of permutations to generate.  For
--- example, given @[\'A\', \'B\', \'C\']@, 'Repeated' represents
--- @[\"A\", \"B\", \"C\", \"AA\", \"AB\", \"AC\", \"BA\", \"BB\",
--- \"BC\", \"CA\", \"CB\", \"CC\", &#x2026;]@ (continuing forever);
--- 'Unique' represents @[\"A\", \"B\", \"C\", \"AB\", \"BA\", \"CB\",
--- \"BC\", \"CA\", \"AC\", \"ABC\", \"BAC\", \"CBA\", \"BCA\",
--- \"CAB\", \"ACB\"]@; and 'UniqueAllPresent' represents only
--- @[\"ABC\", \"BAC\", \"CBA\", \"BCA\", \"CAB\", \"ACB\"]@.
-data Permutation = Repeated           -- ^ Values are allowed to repeat
-                 | Unique             -- ^ Values are not allowed to repeat
-                 | UniqueAllPresent   -- ^ Same as unique but all values must be present
-
 -- | Find all expressions that hold for all pairs of inputs and
 -- outputs.  The following example finds three functions /f/ such that
 -- /f/(1,2,3)=13 and /f/(10,20,30)=1210:
@@ -179,6 +165,7 @@ findAllExpressions unaryOps binaryOps inputs colNames outputs inputPermType =
   where
     maybeInputs = [map Just i | i <- inputs] -- Inputs lifted to 'Maybe's
     maybeOutputs = map Just outputs          -- Outputs lifted to 'Maybe's
+    numInputs = length colNames              -- Number of input columns
     genUnaryPerms = allValuesNPositions unaryOps    -- Generate unary-operator permutations
     genBinaryPerms = allValuesNPositions binaryOps  -- Generate binary-operator permutations
     genInputPerms =                                 -- Generate input and column-name permutations
@@ -186,6 +173,9 @@ findAllExpressions unaryOps binaryOps inputs colNames outputs inputPermType =
         Repeated -> permuteInputs False maybeInputs colNames
         Unique   -> permuteInputs True maybeInputs colNames
         UniqueAllPresent -> (\_ -> zip (permutations maybeInputs) (permutations colNames))
+        RepeatedAllPresent -> (\n -> let perms = permuteInputs False maybeInputs colNames n
+                                         haveAll (_, c) = length (nub c) == numInputs
+                                     in filter haveAll perms)
 
 -- | Do most of the work for 'findAllExpressions'.
 findAllExpressions' :: (Int -> [[UnaryOperator]])            -- ^ Generate permutations of /n/ unary operators
