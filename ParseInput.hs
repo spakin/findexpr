@@ -72,6 +72,7 @@ unaryTable :: [UnaryOperator]
 unaryTable =
   map UnaryOperator [("-",   liftM negate,     stringPrefix "-"),
                      ("abs", liftM abs,        stringPrefix "abs"),
+                     ("sgn", liftM signum,     stringPrefix "sgn"),
                      ("not", liftM (xor 1),    stringPrefix "not")]
   where stringPrefix p s = p ++ "(" ++ s ++ ")"
 

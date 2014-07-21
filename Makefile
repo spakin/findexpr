@@ -3,6 +3,9 @@
 # By Scott Pakin <scott-fexpr@pakin.org> #
 ##########################################
 
+HS = ghc
+HSOPTS =
+
 PROGRAM = findexpr
 SOURCES = Main.hs ParseInput.hs FindExpr.hs
 OBJECTS = $(patsubst %.hs,%.o,$(SOURCES))
@@ -11,7 +14,7 @@ IFACES = $(patsubst %.hs,%.hi,$(SOURCES))
 all: $(PROGRAM)
 
 $(PROGRAM): $(SOURCES)
-	ghc --make $(SOURCES) -o $(PROGRAM)
+	$(HS) $(HSOPTS) --make $(SOURCES) -o $(PROGRAM)
 
 clean:
 	$(RM) $(PROGRAM) $(OBJECTS) $(IFACES)
