@@ -4,7 +4,7 @@
 ##########################################
 
 HS = ghc
-HSOPTS =
+HSOPTS = -O -rtsopts
 
 PROGRAM = findexpr
 SOURCES = Main.hs ParseInput.hs FindExpr.hs
