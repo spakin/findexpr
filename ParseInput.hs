@@ -70,11 +70,14 @@ instance Show UnaryOperator where
 -- | Associate names with unary functions.
 unaryTable :: [UnaryOperator]
 unaryTable =
-  map UnaryOperator [("-",   liftM negate,     stringPrefix "-"),
-                     ("abs", liftM abs,        stringPrefix "abs"),
-                     ("sgn", liftM signum,     stringPrefix "sgn"),
-                     ("not", liftM (xor 1),    stringPrefix "not")]
+  map UnaryOperator [("-",   liftM negate, stringPrefix "-"),
+                     ("abs", liftM abs,    stringPrefix "abs"),
+                     ("sgn", liftM signum, stringPrefix "sgn"),
+                     ("not", not1Bit,      stringPrefix "not")]
   where stringPrefix p s = p ++ "(" ++ s ++ ")"
+        not1Bit (Just 0) = Just 1
+        not1Bit (Just 1) = Just 0
+        not1Bit _        = Nothing
 
 -- | Given a 'UnaryOperator' and a parser that produces a
 -- 'UnaryOperator', return a new parser that matches the name of the
