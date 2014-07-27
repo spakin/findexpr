@@ -29,19 +29,25 @@ data Tree u b = Val                        -- ^ A value at a leaf of the tree
 -- with that many operators.  At this stage we consider only the
 -- structure of each tree and therefore return each tree typed as
 -- @Tree () ()@.
-treesOfOpCount :: Integer -> [Tree () ()]
+treesOfOpCount :: Int -> [Tree () ()]
 treesOfOpCount 0 = [Val]
 treesOfOpCount n = unaryTrees ++ binaryTrees
-  where unaryTrees = [UnOp () t | t <- treesOfOpCount (n - 1)]
+  where unaryTrees = [UnOp () t | t <- treesByOpCount !! (n - 1)]
         binaryTrees = [BinOp () t1 t2 |
                        n' <- [0 .. n - 1],
-                       t1 <- treesOfOpCount n',
-                       t2 <- treesOfOpCount (n - 1 - n')]
+                       t1 <- treesByOpCount !! n',
+                       t2 <- treesByOpCount !! (n - 1 - n')]
+
+-- | Define a list in which the first element is all 0-operator trees,
+-- the second element is all 1-operator trees, the third element is
+-- all 2-operator trees, and so on /ad infinitum/.
+treesByOpCount :: [[Tree () ()]]
+treesByOpCount = map treesOfOpCount [0..]
 
 -- | Return a list of all tree structures in nondecreasing order of
 -- operator count (&#x2248; complexity).
 treeStructures :: [Tree () ()]
-treeStructures = concatMap treesOfOpCount [0..]
+treeStructures = concat treesByOpCount
 
 -- | Substitute all unary and binary operators in a tree with the
 -- values provided.  That is, the structure of the tree remains the
