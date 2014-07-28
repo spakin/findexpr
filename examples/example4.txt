@@ -1,0 +1,10 @@
+# This example demonstrates how to produce more than one expression
+# for each output.
+
+unary ops:
+binary ops: + * - / ^
+constants:
+solutions: 5
+columns: 1 => f_25 f_50 f_75 f_100
+
+1 => 25 50 75 100

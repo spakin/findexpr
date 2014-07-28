@@ -16,6 +16,8 @@ binary ops: /b/&#x2081; /b/&#x2082; &#x2026;
 
 constants: /c/&#x2081; /c/&#x2082; &#x2026;
 
+solutions: /s/
+
 columns: /i/&#x2081; /i/&#x2082; &#x2026; => /o/&#x2081; /o/&#x2082; &#x2026;
 
 /i/&#x2081; /i/&#x2082; &#x2026; => /o/&#x2081; /o/&#x2082; &#x2026;
@@ -223,6 +225,17 @@ constants = do { string "constants:"
                ; return consts
                }
 
+-- | Parse a single integer beginning with
+-- \"@solutions:@\".
+solutionsWanted :: Parser Integer
+solutionsWanted = do { string "solutions:"
+                     ; skipMany separators
+                     ; oneConst <- integer
+                     ; skipMany separators
+                     ; newline
+                     ; return oneConst
+                     }
+
 -- | Parse a single character that is valid within a column name.
 colChar :: Parser Char
 colChar = alphaNum <|> oneOf "!@#$%^&*()-_+[]{}|:;<>?./'" <|>
@@ -348,6 +361,7 @@ data ParsedInput = ParsedInput { unaryFuncs  :: [UnaryOperator]          -- ^ Li
                                , binaryFuncs :: [BinaryOperator]         -- ^ List of binary operators
                                , permType    :: Permutation              -- ^ How input columns and column names should be permuted
                                , constVals   :: [Integer]                -- ^ List of constants to append to each column of inputs and input names
+                               , numSolns    :: Integer                  -- ^ Number of solutions to output
                                , colNames    :: ([String], [String])     -- ^ Lists of input column names and output column names
                                , dataTable   :: [([Integer], [Integer])] -- ^ Rows of data table, each mapping inputs to outputs
                                }
@@ -359,6 +373,7 @@ instance Show ParsedInput where
            "constants: " ++ showList (constVals p) ++ "\n" ++
            "allow reps: " ++ (if reps then "yes" else "no") ++ "\n" ++
            "require all: " ++ (if reqAll then "yes" else "no") ++ "\n" ++
+           "solutions: " ++ (show $ numSolns p) ++ "\n" ++
            "columns: " ++ (filter (\c -> c /= '"') $ showInsOuts $ colNames p) ++
            concatMap showInsOuts (dataTable p)
     where perm = permType p
@@ -381,6 +396,8 @@ instance Show ParsedInput where
 --     * Permutations requiring all values (\"@require all:@
 --       @yes@|@no@\", default: 'False')
 --
+--     * Number of solutions to output (\"@solutions:@\", default: 1)
+--
 --     * Column names (\"@columns:@ \"/i1/ /i2/ /i3/ &#x2026; @=>@
 --       /o1/ /o2/ /o3/ &#x2026;\")
 --
@@ -398,12 +415,14 @@ entireInput = do { skipMany space
                  ; skipMany space
                  ; a <- option False allPresent
                  ; skipMany space
+                 ; s <- option 1 solutionsWanted
+                 ; skipMany space
                  ; n <- maybeMatch $ try columnNames
                  ; skipMany space
                  ; io <- inputsOutputs
                  ; skipMany space
                  ; eof
-                 ; case validateInputs u b c r a n io of
+                 ; case validateInputs u b c r a s n io of
                    (Right parsing) -> return parsing
                    (Left errMsg)   -> fail errMsg
                  }
@@ -432,18 +451,21 @@ validateInputs :: [UnaryOperator]             -- ^ Subset of unary operators to 
                -> Maybe [Integer]             -- ^ List of constants, if provided
                -> Bool                        -- ^ 'True' = allow variables to be used more than once
                -> Bool                        -- ^ 'True' = require variables to be used at least once
+               -> Integer                     -- ^ Number of expressions to output per column
                -> Maybe ([String], [String])  -- ^ List of input and output column names, if provided
                -> [([Integer], [Integer])]    -- ^ List of pairs associating inputs with outputs
                -> Either String ParsedInput   -- ^ A 'ParsedInput' if the above are valid or an error message if invalid
-validateInputs uFuncs bFuncs cVals reps all cNames dTable =
+validateInputs uFuncs bFuncs cVals reps all solns cNames dTable =
   do { failIf (not $ sameLength inputRows) "Input rows have differing numbers of columns"
      ; failIf (not $ sameLength outputRows) "Output rows have differing numbers of columns"
      ; failIf (length inputColNames /= numInputs) "Not every column of input was given a name"
      ; failIf (length outputColNames /= numOutputs) "Not every column of output was given a name"
+     ; failIf (solns <= 0) "The number of solutions requested must be a positive number"
      ; return $ ParsedInput {unaryFuncs  = uFuncs,
                              binaryFuncs = bFuncs,
                              constVals   = constantVals,
                              permType    = valueUsage,
+                             numSolns    = solns,
                              colNames    = (inputColNames ++ constColNames, outputColNames),
                              dataTable   = dataVals}
      }

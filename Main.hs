@@ -107,7 +107,9 @@ main =
     let possibleParse = parse entireInput progName $ removeComments problemText
     problemInfo <- case possibleParse of Left errMsg  -> fail $ show errMsg
                                          Right record -> return record
-    putStrLn $ show problemInfo  -- Temporary
+
+    -- Report what problem we're trying to solve.
+    putStrLn $ show problemInfo
 
     -- Convert all 'Integer' values to 'Int' values, or die trying.
     let (unOps, binOps, inputData, outputData, inColNames, outColNames, permType) = produceFindExprArgs problemInfo
@@ -117,7 +119,7 @@ main =
     -- Find expressions for each column of output in turn.
     let produceOneOutput o = findAllExpressions unOps binOps inputs inColNames o permType
     let allOutputs = map produceOneOutput $ transpose outputs
-    let exprsToOutput = 1   -- TODO: Let user specify this value
+    let exprsToOutput = (fromIntegral $ numSolns problemInfo) :: Int
     let firstFewOutputs = map (take exprsToOutput) allOutputs
 
     -- Display all of the expressions we found.
