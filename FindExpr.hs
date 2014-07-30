@@ -25,29 +25,41 @@ data Tree u b = Val                        -- ^ A value at a leaf of the tree
           | BinOp b (Tree u b) (Tree u b)  -- ^ A binary operator applied to two subtrees
           deriving Show
 
--- | Given a number of operators (unary + binary), return all trees
--- with that many operators.  At this stage we consider only the
--- structure of each tree and therefore return each tree typed as
--- @Tree () ()@.
-treesOfOpCount :: Int -> [Tree () ()]
-treesOfOpCount 0 = [Val]
-treesOfOpCount n = unaryTrees ++ binaryTrees
-  where unaryTrees = [UnOp () t | t <- treesByOpCount !! (n - 1)]
-        binaryTrees = [BinOp () t1 t2 |
-                       n' <- [0 .. n - 1],
-                       t1 <- treesByOpCount !! n',
-                       t2 <- treesByOpCount !! (n - 1 - n')]
+-- | A 'PathStep' is a step toward the east, north, or northeast.
+data PathStep = E | N | NE
+              deriving (Eq, Show)
 
--- | Define a list in which the first element is all 0-operator trees,
--- the second element is all 1-operator trees, the third element is
--- all 2-operator trees, and so on /ad infinitum/.
-treesByOpCount :: [[Tree () ()]]
-treesByOpCount = map treesOfOpCount [0..]
+-- | Return all paths from the southwest corner of an /M/&#x00D7;/N/
+-- grid to the northeast corner that don't stray above the
+-- antidiagonal.
+schroederPaths :: Int -> Int -> [[PathStep]]
+schroederPaths w h =
+  case (w, h) of
+    (0, 0)    -> [[]]
+    (0, _)    -> goN
+    otherwise -> goNE ++ goE ++ (if w < h then goN else [])
+  where goN  = [N:ps  | ps <- schroederPaths w (h - 1)]
+        goE  = [E:ps  | ps <- schroederPaths (w - 1) h]
+        goNE = [NE:ps | ps <- schroederPaths (w - 1) (h - 1)]
+
+-- | Convert a Schr&#x00F6;der path to a binary tree.
+pathToTree :: [PathStep] -> Tree () ()
+pathToTree ps = fst $ pathToTree' ps
+  where pathToTree' :: [PathStep] -> (Tree () (), [PathStep])
+        pathToTree' [] = (Val, [])
+        pathToTree' (NE:ps) = (UnOp () childTree, restOfPath)
+          where (childTree, restOfPath) = pathToTree' ps
+        pathToTree' (E:ps) = (BinOp () leftTree rightTree, restOfPath)
+          where (leftTree, leftRemainder) = pathToTree' ps
+                (rightTree, restOfPath) = pathToTree' leftRemainder
+        pathToTree' (N:ps) = (Val, ps)
 
 -- | Return a list of all tree structures in nondecreasing order of
 -- operator count (&#x2248; complexity).
 treeStructures :: [Tree () ()]
-treeStructures = concat treesByOpCount
+treeStructures =
+  let allSchroederPaths = concat [schroederPaths e e | e <- [0..]]
+  in  [pathToTree p | p <- allSchroederPaths]
 
 -- | Substitute all unary and binary operators in a tree with the
 -- values provided.  That is, the structure of the tree remains the
