@@ -7,7 +7,7 @@ HS = ghc
 HSOPTS = -O -rtsopts -with-rtsopts=-K2G
 
 PROGRAM = findexpr
-SOURCES = Main.hs ParseInput.hs FindExpr.hs
+SOURCES = Main.hs ParseInput.hs TreeGen.hs FindExpr.hs
 OBJECTS = $(patsubst %.hs,%.o,$(SOURCES))
 IFACES = $(patsubst %.hs,%.hi,$(SOURCES))
 
