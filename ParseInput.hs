@@ -379,7 +379,9 @@ instance Show ParsedInput where
     where perm = permType p
           reps = perm == Repeated || perm == RepeatedAllPresent
           reqAll = perm == UniqueAllPresent || perm == RepeatedAllPresent
-          showInsOuts (ins, outs) = (showList ins) ++ " => " ++ (showList outs) ++ "\n"
+          numInputs = (length . fst . colNames $ p) - (length . constVals $ p)
+          showInsOuts (ins, outs) = (showList $ take numInputs ins) ++
+                                    " => " ++ (showList outs) ++ "\n"
           showList lst = intercalate " " $ map show lst
 
 -- | The entire input to parse is expected to be of the form
