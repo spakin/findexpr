@@ -374,15 +374,20 @@ instance Show ParsedInput where
            "allow reps: " ++ (if reps then "yes" else "no") ++ "\n" ++
            "require all: " ++ (if reqAll then "yes" else "no") ++ "\n" ++
            "solutions: " ++ (show $ numSolns p) ++ "\n" ++
-           "columns: " ++ (filter (\c -> c /= '"') $ showInsOuts $ colNames p) ++
+           "columns: " ++ (showInsOuts $ colNames p) ++
            concatMap showInsOuts (dataTable p)
     where perm = permType p
           reps = perm == Repeated || perm == RepeatedAllPresent
           reqAll = perm == UniqueAllPresent || perm == RepeatedAllPresent
           numInputs = (length . fst . colNames $ p) - (length . constVals $ p)
+          showQuoted val =
+            let str = show val
+            in  if length str >= 2 && str!!0 == '"' && notElem ' ' str
+                then init . tail $ str
+                else str
           showInsOuts (ins, outs) = (showList $ take numInputs ins) ++
                                     " => " ++ (showList outs) ++ "\n"
-          showList lst = intercalate " " $ map show lst
+          showList lst = intercalate " " $ map showQuoted lst
 
 -- | The entire input to parse is expected to be of the form
 --
