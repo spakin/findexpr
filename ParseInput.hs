@@ -126,26 +126,52 @@ instance Show BinaryOperator where
 -- | Associate names with binary functions.
 binaryTable :: [BinaryOperator]
 binaryTable =
-  map BinaryOperator [("+",   liftM2 (+),     stringOp "+"),
-                      ("*",   liftM2 (*),     stringOp "*"),
-                      ("-",   liftM2 (-),     stringOp "-"),
-                      ("/",   safeDiv div,    stringOp "/"),
-                      ("^",   safePower,      stringOp "^"),
-                      ("mod", safeDiv mod,    stringOp "mod"),
-                      ("max", liftM2 max,     stringPrefix "max"),
-                      ("min", liftM2 min,     stringPrefix "min"),
-                      ("and", safeBool (.&.), stringOp "and"),
-                      ("or",  safeBool (.|.), stringOp "or"),
-                      ("xor", safeBool xor,   stringOp "xor")]
+  map BinaryOperator [("+",    liftM2 (+),     stringOp "+"),
+                      ("*",    liftM2 (*),     stringOp "*"),
+                      ("-",    liftM2 (-),     stringOp "-"),
+                      ("/",    safeDiv div,    stringOp "/"),
+                      ("^",    safePower,      stringOp "^"),
+                      ("mod",  safeDiv mod,    stringOp "mod"),
+                      ("max",  liftM2 max,     stringPrefix "max"),
+                      ("min",  liftM2 min,     stringPrefix "min"),
+                      ("and",  safeBool (.&.), stringOp "and"),
+                      ("or",   safeBool (.|.), stringOp "or"),
+                      ("xor",  safeBool xor,   stringOp "xor"),
+                      ("nand", nand1Bit,       stringOp "nand"),
+                      ("nor",  nor1Bit,        stringOp "nor")]
   where stringOp opStr a b = "(" ++ a ++ ") " ++ opStr ++ " (" ++ b ++ ")"
         stringPrefix opStr a b = opStr ++ "(" ++ a ++ ", " ++ b ++ ")"
-        safeDiv op (Just a) (Just b) | b /= 0 = Just (a `op` b)
-        safeDiv _ _ _ = Nothing
-        safeBool op (Just a) (Just b) | a >= 0 && b >= 0 = Just (a `op` b)
-        safeBool _ _ _                                   = Nothing
-        safePower (Just base) (Just exp) | exp < 0   = Nothing
-                                         | otherwise = Just $ base^exp
-        safePower _           _                      = Nothing
+
+-- | Lift a binary function whose second argument must be nonzero into
+-- a 'Maybe'.
+safeDiv :: (Int -> Int -> Int) -> Maybe Int -> Maybe Int -> Maybe Int
+safeDiv op (Just a) (Just b) | b /= 0 = Just (a `op` b)
+safeDiv _ _ _ = Nothing
+
+-- | Define an exponentiation function on non-negative exponents.
+safePower :: Maybe Int -> Maybe Int -> Maybe Int
+safePower (Just base) (Just exp) | exp < 0   = Nothing
+                                 | otherwise = Just $ base^exp
+safePower _           _                      = Nothing
+
+-- | Lift a binary function defined on positive integers into a 'Maybe'.
+safeBool :: (Int -> Int -> Int) -> Maybe Int -> Maybe Int -> Maybe Int
+safeBool op (Just a) (Just b) | a >= 0 && b >= 0 = Just (a `op` b)
+safeBool _ _ _                                   = Nothing
+
+-- | Define a NAND function on single-bit integers.
+nand1Bit :: Maybe Int -> Maybe Int -> Maybe Int
+nand1Bit (Just 1) (Just 1) = Just 0
+nand1Bit (Just 0) (Just _) = Just 1
+nand1Bit (Just _) (Just 0) = Just 1
+nand1Bit _        _        = Nothing
+
+-- | Define a NOR function on single-bit integers.
+nor1Bit :: Maybe Int -> Maybe Int -> Maybe Int
+nor1Bit (Just 0) (Just 0) = Just 1
+nor1Bit (Just 1) (Just _) = Just 0
+nor1Bit (Just _) (Just 1) = Just 0
+nor1Bit _        _        = Nothing
 
 -- | Given a 'BinaryOperator' and a parser that produces a
 -- 'BinaryOperator', return a new parser that matches the name of the

@@ -5,7 +5,7 @@
 # findexpr.
 
 unary ops:  not
-binary ops: and or
+binary ops: and or xor nand nor
 constants:
 
 columns: b3 b2 b1 b0 => f
