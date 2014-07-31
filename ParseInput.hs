@@ -139,7 +139,8 @@ binaryTable =
                       ("xor",  safeBool xor,   stringOp "xor"),
                       ("nand", nand1Bit,       stringOp "nand"),
                       ("nor",  nor1Bit,        stringOp "nor")]
-  where stringOp opStr a b = "(" ++ a ++ ") " ++ opStr ++ " (" ++ b ++ ")"
+  where stringOp opStr a b = (maybeParens a) ++ " " ++ opStr ++ " " ++ (maybeParens b)
+        maybeParens str = if elem ' ' str then "(" ++ str ++ ")" else str
         stringPrefix opStr a b = opStr ++ "(" ++ a ++ ", " ++ b ++ ")"
 
 -- | Lift a binary function whose second argument must be nonzero into
