@@ -148,7 +148,7 @@ findAllExpressions' genUnaryPerms genBinaryPerms genInputPerms maybeOutputs =
    -- Succeed if every input row produces the
    -- corresponding output value.
    all (validateTree treeInt) (zip iiPerms maybeOutputs)]
-  where extractUIntFuncs = map (\(UnaryOperator (_, i, _)) -> i)
-        extractUStringFuncs = map (\(UnaryOperator (_, _, s)) -> s)
-        extractBIntFuncs = map (\(BinaryOperator (_, i, _)) -> i)
-        extractBStringFuncs = map (\(BinaryOperator (_, _, s)) -> s)
+  where extractUIntFuncs = map (\(UnaryOperator (_, i, _, _)) -> i)
+        extractUStringFuncs = map (\(UnaryOperator (_, _, s, _)) -> s)
+        extractBIntFuncs = map (\(BinaryOperator (_, i, _, _)) -> i)
+        extractBStringFuncs = map (\(BinaryOperator (_, _, s, _)) -> s)

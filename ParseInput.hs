@@ -56,26 +56,35 @@ separators = skipMany1 $ oneOf " \t,"
 maybeMatch :: Parser a -> Parser (Maybe a)
 maybeMatch parser = option Nothing $ do { r <- parser ; return (Just r) }
 
+-- | An 'OperatorCategory' describes a unary or binary operator.
+data OperatorCategory = BitwiseOp      -- ^ Operator on single or multiple bits
+                      | ArithmeticOp   -- ^ Arithmetic operator (not bitwise)
+                      deriving Eq
+
 ---------------------------------------------------------------------------
 
 -- | A 'UnaryOperator' represents the name of a unary function, a
--- unary function on 'Maybe' 'Int' (because it's allowed to fail) and
--- as a unary function on 'String' that construct a textual
--- description of an expression.
-newtype UnaryOperator = UnaryOperator (String, Maybe Int -> Maybe Int, String -> String)
+-- unary function on 'Maybe' 'Int' (because it's allowed to fail), a
+-- unary function on 'String' that construct a textual description of
+-- an expression, and a list of one or more categories to which the
+-- operator belongs.
+newtype UnaryOperator = UnaryOperator (String,
+                                       Maybe Int -> Maybe Int,
+                                       String -> String,
+                                       [OperatorCategory])
 
 -- Show a 'UnaryOperator' by returning its name and ignoring the two
 -- function terms.
 instance Show UnaryOperator where
-  show (UnaryOperator (name, _, _)) = name
+  show (UnaryOperator (name, _, _, _)) = name
 
 -- | Associate names with unary functions.
 unaryTable :: [UnaryOperator]
 unaryTable =
-  map UnaryOperator [("-",   liftM negate, stringPrefix "-"),
-                     ("abs", liftM abs,    stringPrefix "abs"),
-                     ("sgn", liftM signum, stringPrefix "sgn"),
-                     ("not", not1Bit,      stringPrefix "not")]
+  map UnaryOperator [("-",   liftM negate, stringPrefix "-",   [ArithmeticOp]),
+                     ("abs", liftM abs,    stringPrefix "abs", [ArithmeticOp]),
+                     ("sgn", liftM signum, stringPrefix "sgn", [ArithmeticOp]),
+                     ("not", not1Bit,      stringPrefix "not", [BitwiseOp])]
   where stringPrefix p s = p ++ "(" ++ s ++ ")"
         not1Bit (Just 0) = Just 1
         not1Bit (Just 1) = Just 0
@@ -86,7 +95,7 @@ unaryTable =
 -- 'UnaryOperator' and, failing that, falls back onto the given
 -- parser.
 matchUnOperator :: UnaryOperator -> Parser UnaryOperator -> Parser UnaryOperator
-matchUnOperator op@(UnaryOperator (name, ifunc, sfunc)) rhs =
+matchUnOperator op@(UnaryOperator (name, _, _, _)) rhs =
           do { try $ string name
              ; return op
              } <|> rhs
@@ -107,38 +116,49 @@ unaries = do { string "unary"
              ; return ulist
              }
 
+-- | Return a subset of 'unaryTable' that contains (or doesn't
+-- contain) a given 'OperatorCategory' in its list of categories.
+filterUnariesByCategory :: OperatorCategory                                  -- ^ Category to search for
+                        -> (OperatorCategory -> [OperatorCategory] -> Bool)  -- ^ Match function (typically 'elem' or 'notElem')
+                        -> [UnaryOperator]                                   -- ^ Search table (typically 'unaryTable')
+                        -> [UnaryOperator]                                   -- ^ List of matches
+filterUnariesByCategory c setOp =
+  filter (\(UnaryOperator (_, _, _, categories)) -> c `setOp` categories)
+
 ---------------------------------------------------------------------------
 
 -- | A 'BinaryOperator' represents the name of a binary function, a
--- binary function on 'Maybe' 'Int' (because it's allowed to fail) and
--- as a binary function on 'String' that construct a textual
--- description of an expression.
+-- binary function on 'Maybe' 'Int' (because it's allowed to fail), a
+-- binary function on 'String' that construct a textual description of
+-- an expression, and a list of one or more categories to which the
+-- operator belongs.
 newtype BinaryOperator =
   BinaryOperator (String,
                   Maybe Int -> Maybe Int -> Maybe Int,
-                  String -> String -> String)
+                  String -> String -> String,
+                  [OperatorCategory])
 
 -- | Show a 'BinaryOperator' by returning its name and ignoring the two
 -- function terms.
 instance Show BinaryOperator where
-  show (BinaryOperator (name, _, _)) = name
+  show (BinaryOperator (name, _, _, _)) = name
 
 -- | Associate names with binary functions.
 binaryTable :: [BinaryOperator]
 binaryTable =
-  map BinaryOperator [("+",    liftM2 (+),     stringOp "+"),
-                      ("*",    liftM2 (*),     stringOp "*"),
-                      ("-",    liftM2 (-),     stringOp "-"),
-                      ("/",    safeDiv div,    stringOp "/"),
-                      ("^",    safePower,      stringOp "^"),
-                      ("mod",  safeDiv mod,    stringOp "mod"),
-                      ("max",  liftM2 max,     stringPrefix "max"),
-                      ("min",  liftM2 min,     stringPrefix "min"),
-                      ("and",  safeBool (.&.), stringOp "and"),
-                      ("or",   safeBool (.|.), stringOp "or"),
-                      ("xor",  safeBool xor,   stringOp "xor"),
-                      ("nand", nand1Bit,       stringOp "nand"),
-                      ("nor",  nor1Bit,        stringOp "nor")]
+  map BinaryOperator [("+",    liftM2 (+),     stringOp "+",       [ArithmeticOp]),
+                      ("*",    liftM2 (*),     stringOp "*",       [ArithmeticOp]),
+                      ("-",    liftM2 (-),     stringOp "-",       [ArithmeticOp]),
+                      ("/",    safeDiv div,    stringOp "/",       [ArithmeticOp]),
+                      ("^",    safePower,      stringOp "^",       [ArithmeticOp]),
+                      ("mod",  safeDiv mod,    stringOp "mod",     [ArithmeticOp]),
+                      ("max",  liftM2 max,     stringPrefix "max", [ArithmeticOp]),
+                      ("min",  liftM2 min,     stringPrefix "min", [ArithmeticOp]),
+                      ("and",  safeBool (.&.), stringOp "and",     [BitwiseOp]),
+                      ("or",   safeBool (.|.), stringOp "or",      [BitwiseOp]),
+                      ("xor",  safeBool xor,   stringOp "xor",     [BitwiseOp]),
+                      ("nand", nand1Bit,       stringOp "nand",    [BitwiseOp]),
+                      ("nor",  nor1Bit,        stringOp "nor",     [BitwiseOp])]
   where stringOp opStr a b = (maybeParens a) ++ " " ++ opStr ++ " " ++ (maybeParens b)
         maybeParens str = if elem ' ' str then "(" ++ str ++ ")" else str
         stringPrefix opStr a b = opStr ++ "(" ++ a ++ ", " ++ b ++ ")"
@@ -179,7 +199,7 @@ nor1Bit _        _        = Nothing
 -- 'BinaryOperator' and, failing that, falls back onto the given
 -- parser.
 matchBinOperator :: BinaryOperator -> Parser BinaryOperator -> Parser BinaryOperator
-matchBinOperator op@(BinaryOperator (name, ifunc, sfunc)) rhs =
+matchBinOperator op@(BinaryOperator (name, _, _, _)) rhs =
           do { try $ string name
              ; return op
              } <|> rhs
@@ -199,6 +219,15 @@ binaries = do { string "binary"
               ; newline
               ; return blist
               }
+
+-- | Return a subset of 'binaryTable' that contains (or doesn't
+-- contain) a given 'OperatorCategory' in its list of categories.
+filterBinariesByCategory :: OperatorCategory                                  -- ^ Category to search for
+                        -> (OperatorCategory -> [OperatorCategory] -> Bool)   -- ^ Match function (typically 'elem' or 'notElem')
+                        -> [BinaryOperator]                                   -- ^ Search table (typically 'binaryTable')
+                        -> [BinaryOperator]                                   -- ^ List of matches
+filterBinariesByCategory c setOp =
+  filter (\(BinaryOperator (_, _, _, categories)) -> c `setOp` categories)
 
 ---------------------------------------------------------------------------
 
@@ -418,9 +447,13 @@ instance Show ParsedInput where
 
 -- | The entire input to parse is expected to be of the form
 --
---     * Unary operators (\"@unary ops:@ &#x2026;\", default: 'allUnaries')
+--     * Unary operators (\"@unary ops:@ &#x2026;\", default:
+--       'unaryTable', either the bitwise or non-bitwise operators, as
+--       appropriate)
 --
---     * Binary operators (\"@binary ops:@ &#x2026;\", default: 'allBinaries')
+--     * Binary operators (\"@binary ops:@ &#x2026;\", default:
+--       'binaryTable', either the bitwise or non-bitwise operators,
+--       as appropriate)
 --
 --     * Constants (\"@constants:@ &#x2026;\", default: @1@)
 --
@@ -439,9 +472,9 @@ instance Show ParsedInput where
 --       &#x2026; @=>@ /o1/ /o2/ /o3/ &#x2026;\")
 entireInput :: Parser ParsedInput
 entireInput = do { skipMany space
-                 ; u <- option unaryTable unaries
+                 ; u <- maybeMatch unaries
                  ; skipMany space
-                 ; b <- option binaryTable binaries
+                 ; b <- maybeMatch binaries
                  ; skipMany space
                  ; c <- maybeMatch $ try constants
                  ; skipMany space
@@ -478,10 +511,17 @@ provideColumnNames numIn numOut given = (iNames, oNames)
         (iNameList, oNameList) = case given of Nothing -> allColumnNames
                                                Just cNames -> cNames
 
+-- | Return 'True' if all elements of a list of integers are either 0 or 1.
+allBits :: (Integral a) => [a] -> Bool
+allBits = all isBit
+  where isBit 0 = True
+        isBit 1 = True
+        isBit _ = False
+
 -- | Postprocess and package up a set of parsed values into a
 -- 'ParsedInput' if the values are valid or an error message if not.
-validateInputs :: [UnaryOperator]             -- ^ Subset of unary operators to consider
-               -> [BinaryOperator]            -- ^ Subset of binary operators to consider
+validateInputs :: Maybe [UnaryOperator]       -- ^ Subset of unary operators to consider
+               -> Maybe [BinaryOperator]      -- ^ Subset of binary operators to consider
                -> Maybe [Integer]             -- ^ List of constants, if provided
                -> Bool                        -- ^ 'True' = allow variables to be used more than once
                -> Bool                        -- ^ 'True' = require variables to be used at least once
@@ -489,14 +529,14 @@ validateInputs :: [UnaryOperator]             -- ^ Subset of unary operators to 
                -> Maybe ([String], [String])  -- ^ List of input and output column names, if provided
                -> [([Integer], [Integer])]    -- ^ List of pairs associating inputs with outputs
                -> Either String ParsedInput   -- ^ A 'ParsedInput' if the above are valid or an error message if invalid
-validateInputs uFuncs bFuncs cVals reps all solns cNames dTable =
+validateInputs uFuncs bFuncs cVals reps allV solns cNames dTable =
   do { failIf (not $ sameLength inputRows) "Input rows have differing numbers of columns"
      ; failIf (not $ sameLength outputRows) "Output rows have differing numbers of columns"
      ; failIf (length inputColNames /= numInputs) "Not every column of input was given a name"
      ; failIf (length outputColNames /= numOutputs) "Not every column of output was given a name"
      ; failIf (solns <= 0) "The number of solutions requested must be a positive number"
-     ; return $ ParsedInput {unaryFuncs  = uFuncs,
-                             binaryFuncs = bFuncs,
+     ; return $ ParsedInput {unaryFuncs  = unaryFunctions,
+                             binaryFuncs = binaryFunctions,
                              constVals   = constantVals,
                              permType    = valueUsage,
                              numSolns    = solns,
@@ -508,11 +548,24 @@ validateInputs uFuncs bFuncs cVals reps all solns cNames dTable =
         numInputs = length $ head inputRows
         numOutputs = length $ head outputRows
         (inputColNames, outputColNames) = provideColumnNames numInputs numOutputs cNames
-        valueUsage = case (reps, all) of (False, False) -> Unique
-                                         (False, True)  -> UniqueAllPresent
-                                         (True,  False) -> Repeated
-                                         (True,  True)  -> RepeatedAllPresent
+        unaryFunctions =
+          case uFuncs of Nothing  -> if booleanInputs then
+                                       filterUnariesByCategory BitwiseOp elem unaryTable
+                                     else
+                                       filterUnariesByCategory BitwiseOp notElem unaryTable
+                         Just ops -> ops
+        binaryFunctions =
+          case bFuncs of Nothing  -> if booleanInputs then
+                                       filterBinariesByCategory BitwiseOp elem binaryTable
+                                     else
+                                       filterBinariesByCategory BitwiseOp notElem binaryTable
+                         Just ops -> ops
+        valueUsage = case (reps, allV) of (False, False) -> Unique
+                                          (False, True)  -> UniqueAllPresent
+                                          (True,  False) -> Repeated
+                                          (True,  True)  -> RepeatedAllPresent
         constantVals = case cVals of Nothing -> [1]
                                      Just nums -> nums
         constColNames = map show constantVals
         dataVals = map (\(is, os) -> (is ++ constantVals, os)) dTable
+        booleanInputs = all allBits inputRows

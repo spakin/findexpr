@@ -4,8 +4,6 @@
 # Note: A Karnaugh map is a much better solution technique than
 # findexpr.
 
-unary ops:  not
-binary ops: and or xor nand nor
 constants:
 
 columns: b3 b2 b1 b0 => f
