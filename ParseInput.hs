@@ -149,7 +149,7 @@ binaryTable =
   map BinaryOperator [("+",    liftM2 (+),     stringOp "+",       [ArithmeticOp]),
                       ("*",    liftM2 (*),     stringOp "*",       [ArithmeticOp]),
                       ("-",    liftM2 (-),     stringOp "-",       [ArithmeticOp]),
-                      ("/",    safeDiv div,    stringOp "/",       [ArithmeticOp]),
+                      ("/",    safeDiv div,    safeDivString,      [ArithmeticOp]),
                       ("^",    safePower,      stringOp "^",       [ArithmeticOp]),
                       ("mod",  safeDiv mod,    stringOp "mod",     [ArithmeticOp]),
                       ("max",  liftM2 max,     stringPrefix "max", [ArithmeticOp]),
@@ -162,12 +162,15 @@ binaryTable =
   where stringOp opStr a b = (maybeParens a) ++ " " ++ opStr ++ " " ++ (maybeParens b)
         maybeParens str = if elem ' ' str then "(" ++ str ++ ")" else str
         stringPrefix opStr a b = opStr ++ "(" ++ a ++ ", " ++ b ++ ")"
+        safeDivString a b = "floor(" ++ (stringOp "/" a b) ++ ")"
 
 -- | Lift a binary function whose second argument must be nonzero into
 -- a 'Maybe'.
 safeDiv :: (Int -> Int -> Int) -> Maybe Int -> Maybe Int -> Maybe Int
-safeDiv op (Just a) (Just b) | b /= 0 = Just (a `op` b)
-safeDiv _ _ _ = Nothing
+safeDiv _   _       (Just 0)                            = Nothing
+safeDiv op (Just a) (Just b) | a == minBound && b == -1 = Nothing  -- Really only needed for div
+safeDiv op (Just a) (Just b)                            = Just (a `op` b)
+safeDiv _  _        _                                   = Nothing
 
 -- | Define an exponentiation function on non-negative exponents.
 safePower :: Maybe Int -> Maybe Int -> Maybe Int
