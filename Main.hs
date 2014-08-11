@@ -94,17 +94,20 @@ formatOutputs oss ns =
   where formatOutputs' [] [] = ""
         formatOutputs' os n = concatMap (\o -> n ++ " = " ++ o ++ "\n") os
 
--- | Remove comments (\"@#@\" to end of line) from an input stream.
-removeComments :: String -> String
-removeComments = unlines . map removeCommentsFromLine . lines
+-- | Remove comments (\"@#@\" to end of line) and blank lines from an
+-- input stream.
+removeCommentsAndBlankLines :: String -> String
+removeCommentsAndBlankLines = unlines . removeBlankLines . map removeCommentsFromLine . lines
   where removeCommentsFromLine = takeWhile (/= '#')
+        removeBlankLines = filter (not . null . words)
 
 main =
   do
     -- Parse the input file.
     progName <- getErrorMessageName
     problemText <- getContents
-    let possibleParse = parse entireInput progName $ removeComments problemText
+    let preprocessedText = removeCommentsAndBlankLines problemText
+    let possibleParse = parse entireInput progName preprocessedText
     problemInfo <- case possibleParse of Left errMsg  -> fail $ show errMsg
                                          Right record -> return record
 
