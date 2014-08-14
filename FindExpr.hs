@@ -16,6 +16,8 @@ module FindExpr ( findAllExpressions ) where
 
 import ParseInput
 import TreeGen
+import Control.DeepSeq
+import Control.Parallel.Strategies
 import Data.List
 import Data.Maybe
 
@@ -127,28 +129,37 @@ findAllExpressions' :: (Int -> [[UnaryOperator]])            -- ^ Generate permu
                     -> [Maybe Int]                           -- ^ Output values to compare to
                     -> [String]                              -- ^ An infinite list of expressions that map inputs to outputs
 findAllExpressions' genUnaryPerms genBinaryPerms genInputPerms maybeOutputs =
-  [evaluateTree treeString isPerms |
-   -- Iterate over all tree structures.
-   treeStruct <- treeStructures,
-   let (numUnOps, numBinOps, numVals) = tallyTreeNodes treeStruct,
+  -- This function was originally written as a list comprehension, but
+  -- we had to convert it to primitive bind/return notation to
+  -- facilitate parallelization.
+  treeStructures >>= \treeStruct ->
+  let (numUnOps, numBinOps, numVals) = tallyTreeNodes treeStruct
+  in
    -- Iterate over all sets of unary operators.
-   allUPerms <- genUnaryPerms numUnOps,
-   let uiPerms = extractUIntFuncs allUPerms,
-   let usPerms = extractUStringFuncs allUPerms,
-   -- Iterate over all sets of binary operators.
-   allBPerms <- genBinaryPerms numBinOps,
-   let biPerms = extractBIntFuncs allBPerms,
-   let bsPerms = extractBStringFuncs allBPerms,
-   -- Plug the current operators into the current tree.
-   let treeInt = replaceOperators treeStruct uiPerms biPerms,
-   let treeString = replaceOperators treeStruct usPerms bsPerms,
-   -- Iterate over all permutations of the inputs.
-   (iiPerms, isPerms) <- genInputPerms numVals,
-   length isPerms == numVals,
-   -- Succeed if every input row produces the
-   -- corresponding output value.
-   all (validateTree treeInt) (zip iiPerms maybeOutputs)]
+   genUnaryPerms numUnOps `pbind` \allUPerms ->
+   let uiPerms = extractUIntFuncs allUPerms
+       usPerms = extractUStringFuncs allUPerms
+   in
+    -- Iterate over all sets of binary operators.
+    genBinaryPerms numBinOps `pbind` \allBPerms ->
+    let biPerms = extractBIntFuncs allBPerms
+        bsPerms = extractBStringFuncs allBPerms
+        -- Plug the current operators into the current tree.
+        treeInt = replaceOperators treeStruct uiPerms biPerms
+        treeString = replaceOperators treeStruct usPerms bsPerms
+    in
+     -- Iterate over all permutations of the inputs.
+     genInputPerms numVals >>= \(iiPerms, isPerms) ->
+     if length isPerms == numVals
+     then
+       -- Succeed if every input row produces the corresponding output value.
+       if all (validateTree treeInt) (zip iiPerms maybeOutputs)
+       then return $ evaluateTree treeString isPerms
+       else []
+     else []
   where extractUIntFuncs = map (\(UnaryOperator (_, i, _, _)) -> i)
         extractUStringFuncs = map (\(UnaryOperator (_, _, s, _)) -> s)
         extractBIntFuncs = map (\(BinaryOperator (_, i, _, _)) -> i)
         extractBStringFuncs = map (\(BinaryOperator (_, _, s, _)) -> s)
+        pbind :: (NFData b) => [a] -> (a -> [b]) -> [b]
+        pbind xs f = concat $ parMap (rpar `dot` rdeepseq) f xs

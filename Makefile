@@ -4,7 +4,7 @@
 ##########################################
 
 HS = ghc
-HSOPTS = -O -rtsopts -with-rtsopts=-K2G
+HSOPTS = -O -threaded -rtsopts -with-rtsopts="-K2G -N"
 
 PROGRAM = findexpr
 SOURCES = Main.hs ParseInput.hs TreeGen.hs FindExpr.hs
