@@ -21,20 +21,15 @@ import Control.Parallel.Strategies
 import Data.List
 import Data.Maybe
 
--- | Given a finite list, return a infinite list of infinite lists
--- in which each element appears in each position of some list, with
--- duplication.  Consider the following example:
---
--- >>> take 10 $ map (take 5) $ allValuesAllPositions "ABC"
--- ["AAAAA","BAAAA","CAAAA","ABAAA","BBAAA","CBAAA","ACAAA","BCAAA","CCAAA","AABAA"]
-allValuesAllPositions :: [a] -> [[a]]
-allValuesAllPositions [] = [[]]
-allValuesAllPositions values = (transpose . map cycle) allReplications
-  where
-    numElts = length values
-    replicateElts [] = []
-    replicateElts (x:xs) = (replicate numElts x) ++ replicateElts xs
-    allReplications = iterate replicateElts values
+-- | Define the number of tree structures to process concurrently.
+treesPerGroup :: Int
+treesPerGroup = 1024
+
+-- | Partition a list into groups of a given size.  (The last group
+-- may be smaller than the requested size.)
+partitionList :: Int -> [a] -> [[a]]
+partitionList _ [] = []
+partitionList n xs = (take n xs) : (partitionList n $ drop n xs)
 
 -- | Given a finite list and a number of selections to make with
 -- replacement, return a finite list of finite lists in which each
@@ -44,11 +39,10 @@ allValuesAllPositions values = (transpose . map cycle) allReplications
 -- >>> allValuesNPositions "ABC" 4
 -- ["AAAA","AAAB","AAAC","AABA","AABB","AABC","AACA","AACB","AACC","ABAA","ABAB","ABAC","ABBA","ABBB","ABBC","ABCA","ABCB","ABCC","ACAA","ACAB","ACAC","ACBA","ACBB","ACBC","ACCA","ACCB","ACCC","BAAA","BAAB","BAAC","BABA","BABB","BABC","BACA","BACB","BACC","BBAA","BBAB","BBAC","BBBA","BBBB","BBBC","BBCA","BBCB","BBCC","BCAA","BCAB","BCAC","BCBA","BCBB","BCBC","BCCA","BCCB","BCCC","CAAA","CAAB","CAAC","CABA","CABB","CABC","CACA","CACB","CACC","CBAA","CBAB","CBAC","CBBA","CBBB","CBBC","CBCA","CBCB","CBCC","CCAA","CCAB","CCAC","CCBA","CCBB","CCBC","CCCA","CCCB","CCCC"]
 allValuesNPositions :: [a] -> Int -> [[a]]
-allValuesNPositions values positions = take numRows $ map (reverse . take numCols) allPossibilities
-  where
-    numCols = positions
-    numRows = (length values)^numCols
-    allPossibilities = allValuesAllPositions values
+allValuesNPositions _ 0 = [[]]
+allValuesNPositions values npos =
+  let allTails = allValuesNPositions values (npos - 1)
+  in [v:vs | v <- values, vs <- allTails]
 
 -- | Given a finite list and a number of selections to make with
 -- replacement, return a finite list of finite lists of length-/N/
@@ -69,17 +63,24 @@ uniqueValuesNPositions lst n = map (take n) $ permutations lst
 permuteInputs :: (Eq a, Eq b) => Bool -> [[a]] -> [b] -> Int -> [([[a]], [b])]
 permuteInputs unique inputs colNames numVals =
   if unique then
-    let iPerms = transpose . map (flip uniqueValuesNPositions numVals) $ inputs
-        cPerms = uniqueValuesNPositions colNames numVals
+    let uValsN = flip uniqueValuesNPositions numVals
+        iPerms = transpose . map uValsN $ inputs
+        cPerms = uValsN colNames
     in nub $ zip iPerms cPerms
   else
-    let iPerms = transpose $ flip (\n -> map (flip allValuesNPositions n)) inputs numVals
-        cPerms = allValuesNPositions colNames numVals
+    let aValsN = flip allValuesNPositions numVals
+        iPerms = transpose . map aValsN $ inputs
+        cPerms = aValsN colNames
     in zip iPerms cPerms
 
 -- | Report whether a tree reduces to a given value.
 validateTree :: (Eq a) => (Tree (a -> a) (a -> a -> a)) -> ([a], a) -> Bool
 validateTree tree (inputs, output) = evaluateTree tree inputs == output
+
+-- | Perform the same operation as a list monad's '>>=' but with all
+-- list elements evaluated concurrently.
+pbind :: (NFData b) => [a] -> (a -> [b]) -> [b]
+pbind xs f = concat $ parMap rdeepseq f xs
 
 -- | Find all expressions that hold for all pairs of inputs and
 -- outputs.  The following example finds three functions /f/ such that
@@ -132,34 +133,34 @@ findAllExpressions' genUnaryPerms genBinaryPerms genInputPerms maybeOutputs =
   -- This function was originally written as a list comprehension, but
   -- we had to convert it to primitive bind/return notation to
   -- facilitate parallelization.
-  treeStructures >>= \treeStruct ->
-  let (numUnOps, numBinOps, numVals) = tallyTreeNodes treeStruct
-  in
-   -- Iterate over all sets of unary operators.
-   genUnaryPerms numUnOps `pbind` \allUPerms ->
-   let uiPerms = extractUIntFuncs allUPerms
-       usPerms = extractUStringFuncs allUPerms
+  partitionList treesPerGroup treeStructures >>= \oneTreeGroup ->
+   -- Work on treesPerGroup tree structures concurrently.
+   oneTreeGroup `pbind` \treeStruct ->
+   let (numUnOps, numBinOps, numVals) = tallyTreeNodes treeStruct
    in
-    -- Iterate over all sets of binary operators.
-    genBinaryPerms numBinOps `pbind` \allBPerms ->
-    let biPerms = extractBIntFuncs allBPerms
-        bsPerms = extractBStringFuncs allBPerms
-        -- Plug the current operators into the current tree.
-        treeInt = replaceOperators treeStruct uiPerms biPerms
-        treeString = replaceOperators treeStruct usPerms bsPerms
+    -- Iterate over all sets of unary operators.
+    genUnaryPerms numUnOps >>= \allUPerms ->
+    let uiPerms = extractUIntFuncs allUPerms
+        usPerms = extractUStringFuncs allUPerms
     in
-     -- Iterate over all permutations of the inputs.
-     genInputPerms numVals >>= \(iiPerms, isPerms) ->
-     if length isPerms == numVals
-     then
-       -- Succeed if every input row produces the corresponding output value.
-       if all (validateTree treeInt) (zip iiPerms maybeOutputs)
-       then return $ evaluateTree treeString isPerms
-       else []
-     else []
+     -- Iterate over all sets of binary operators.
+     genBinaryPerms numBinOps >>= \allBPerms ->
+     let biPerms = extractBIntFuncs allBPerms
+         bsPerms = extractBStringFuncs allBPerms
+         -- Plug the current operators into the current tree.
+         treeInt = replaceOperators treeStruct uiPerms biPerms
+         treeString = replaceOperators treeStruct usPerms bsPerms
+     in
+      -- Iterate over all permutations of the inputs.
+      genInputPerms numVals >>= \(iiPerms, isPerms) ->
+      if length isPerms == numVals
+      then
+        -- Succeed if every input row produces the corresponding output value.
+        if all (validateTree treeInt) (zip iiPerms maybeOutputs)
+        then return $ evaluateTree treeString isPerms
+        else []
+      else []
   where extractUIntFuncs = map (\(UnaryOperator (_, i, _, _)) -> i)
         extractUStringFuncs = map (\(UnaryOperator (_, _, s, _)) -> s)
         extractBIntFuncs = map (\(BinaryOperator (_, i, _, _)) -> i)
         extractBStringFuncs = map (\(BinaryOperator (_, _, s, _)) -> s)
-        pbind :: (NFData b) => [a] -> (a -> [b]) -> [b]
-        pbind xs f = concat $ parMap (rpar `dot` rdeepseq) f xs
