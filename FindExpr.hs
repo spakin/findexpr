@@ -140,6 +140,7 @@ findAllExpressions' genUnaryPerms genBinaryPerms genInputPerms maybeOutputs =
       allUnBinPerms = [(u, b) |
                        u <- genUnaryPerms numUnOps,
                        b <- genBinaryPerms numBinOps]
+      allInputPerms = filter (\(_, sp) -> length sp == numVals) $ genInputPerms numVals
   in
    -- Iterate over both sets of unary operators and both sets of
    -- binary operators.
@@ -154,13 +155,10 @@ findAllExpressions' genUnaryPerms genBinaryPerms genInputPerms maybeOutputs =
        treeString = replaceOperators treeStruct usPerms bsPerms
    in
      -- Iterate over all permutations of the inputs.
-     genInputPerms numVals >>= \(iiPerms, isPerms) ->
-     if length isPerms == numVals
-     then
-       -- Succeed if every input row produces the corresponding output value.
-       if all (validateTree treeInt) (zip iiPerms maybeOutputs)
-       then return $ evaluateTree treeString isPerms
-       else []
+     allInputPerms >>= \(iiPerms, isPerms) ->
+     -- Succeed if every input row produces the corresponding output value.
+     if all (validateTree treeInt) (zip iiPerms maybeOutputs)
+     then return $ evaluateTree treeString isPerms
      else []
   where extractUIntFuncs = map (\(UnaryOperator (_, i, _, _)) -> i)
         extractUStringFuncs = map (\(UnaryOperator (_, _, s, _)) -> s)
