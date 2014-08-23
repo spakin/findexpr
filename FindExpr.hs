@@ -18,6 +18,7 @@ import ParseInput
 import TreeGen
 import Control.Concurrent
 import Control.DeepSeq
+import Control.Monad
 import Control.Parallel.Strategies
 import Data.List
 import Data.Maybe
@@ -41,10 +42,7 @@ partitionList n xs = (take n xs) : (partitionList n $ drop n xs)
 -- >>> allValuesNPositions "ABC" 4
 -- ["AAAA","AAAB","AAAC","AABA","AABB","AABC","AACA","AACB","AACC","ABAA","ABAB","ABAC","ABBA","ABBB","ABBC","ABCA","ABCB","ABCC","ACAA","ACAB","ACAC","ACBA","ACBB","ACBC","ACCA","ACCB","ACCC","BAAA","BAAB","BAAC","BABA","BABB","BABC","BACA","BACB","BACC","BBAA","BBAB","BBAC","BBBA","BBBB","BBBC","BBCA","BBCB","BBCC","BCAA","BCAB","BCAC","BCBA","BCBB","BCBC","BCCA","BCCB","BCCC","CAAA","CAAB","CAAC","CABA","CABB","CABC","CACA","CACB","CACC","CBAA","CBAB","CBAC","CBBA","CBBB","CBBC","CBCA","CBCB","CBCC","CCAA","CCAB","CCAC","CCBA","CCBB","CCBC","CCCA","CCCB","CCCC"]
 allValuesNPositions :: [a] -> Int -> [[a]]
-allValuesNPositions _ 0 = [[]]
-allValuesNPositions values npos =
-  let allTails = allValuesNPositions values (npos - 1)
-  in [v:vs | v <- values, vs <- allTails]
+allValuesNPositions = flip replicateM
 
 -- | Given a finite list and a number of selections to make with
 -- replacement, return a finite list of finite lists of length-/N/
