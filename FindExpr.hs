@@ -15,7 +15,7 @@ output values.
 module FindExpr ( findAllExpressions ) where
 
 import ParseInput
-import TreeGen
+import StackGen
 import Control.Concurrent
 import Control.DeepSeq
 import Control.Monad
@@ -73,9 +73,9 @@ permuteInputs unique inputs colNames numVals =
         cPerms = aValsN colNames
     in zip iPerms cPerms
 
--- | Report whether a tree reduces to a given value.
-validateTree :: (Eq a) => (Tree (a -> a) (a -> a -> a)) -> ([a], a) -> Bool
-validateTree tree (inputs, output) = evaluateTree tree inputs == output
+-- | Report whether a stack reduces to a given value.
+validateStack :: (Eq a) => [StackOp (a -> a) (a -> a -> a)] -> ([a], a) -> Bool
+validateStack stack (inputs, output) = evaluateStack stack inputs == output
 
 -- | Perform the same operation as a list monad's '>>=' but with all
 -- list elements evaluated concurrently.
@@ -133,8 +133,8 @@ findAllExpressions' genUnaryPerms genBinaryPerms genInputPerms maybeOutputs =
   -- This function was originally written as a list comprehension, but
   -- we had to convert it to primitive bind/return notation to
   -- facilitate parallelization.
-  treeStructures >>= \treeStruct ->
-  let (numUnOps, numBinOps, numVals) = tallyTreeNodes treeStruct
+  allStackOps >>= \stackOpList ->
+  let (numUnOps, numBinOps, numVals) = tallyStackOpTypes stackOpList
       allUnBinPerms = [(u, b) |
                        u <- genUnaryPerms numUnOps,
                        b <- genBinaryPerms numBinOps]
@@ -148,15 +148,15 @@ findAllExpressions' genUnaryPerms genBinaryPerms genInputPerms maybeOutputs =
        usPerms = extractUStringFuncs bothUPerms
        biPerms = extractBIntFuncs bothBPerms
        bsPerms = extractBStringFuncs bothBPerms
-       -- Plug the current operators into the current tree.
-       treeInt = replaceOperators treeStruct uiPerms biPerms
-       treeString = replaceOperators treeStruct usPerms bsPerms
+       -- Plug the current operators into the current list of stack operations.
+       stackInt = replaceOperators stackOpList uiPerms biPerms
+       stackString = replaceOperators stackOpList usPerms bsPerms
    in
      -- Iterate over all permutations of the inputs.
      allInputPerms >>= \(iiPerms, isPerms) ->
      -- Succeed if every input row produces the corresponding output value.
-     if all (validateTree treeInt) (zip iiPerms maybeOutputs)
-     then return $ evaluateTree treeString isPerms
+     if all (validateStack stackInt) (zip iiPerms maybeOutputs)
+     then return $ evaluateStack stackString isPerms
      else []
   where extractUIntFuncs = map (\(UnaryOperator (_, i, _, _)) -> i)
         extractUStringFuncs = map (\(UnaryOperator (_, _, s, _)) -> s)

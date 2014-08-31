@@ -4,10 +4,10 @@
 ##########################################
 
 HS = ghc
-HSOPTS = -O -threaded -rtsopts -with-rtsopts="-K2G -N"
+HSOPTS = -O -threaded -feager-blackholing -rtsopts -with-rtsopts="-K2G -N"
 
 PROGRAM = findexpr
-SOURCES = Main.hs ParseInput.hs TreeGen.hs FindExpr.hs
+SOURCES = Main.hs ParseInput.hs StackGen.hs FindExpr.hs
 OBJECTS = $(patsubst %.hs,%.o,$(SOURCES))
 IFACES = $(patsubst %.hs,%.hi,$(SOURCES))
 
