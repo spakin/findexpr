@@ -133,25 +133,27 @@ findAllExpressions' genUnaryPerms genBinaryPerms genInputPerms maybeOutputs =
   -- This function was originally written as a list comprehension, but
   -- we had to convert it to primitive bind/return notation to
   -- facilitate parallelization.
-  allStackOps >>= \stackOpList ->
-  let (numUnOps, numBinOps, numVals) = tallyStackOpTypes stackOpList
-      allUnBinPerms = [(u, b) |
-                       u <- genUnaryPerms numUnOps,
-                       b <- genBinaryPerms numBinOps]
-      allInputPerms = filter (\(_, sp) -> length sp == numVals) $ genInputPerms numVals
+  let memoizedInputPerms = map genInputPerms [0..]
   in
-   -- Iterate over both sets of unary operators and both sets of
-   -- binary operators.
-   partitionList numThreads allUnBinPerms `pbind` \someUnBinPerms ->
-   someUnBinPerms >>= \(bothUPerms, bothBPerms) ->
-   let uiPerms = extractUIntFuncs bothUPerms
-       usPerms = extractUStringFuncs bothUPerms
-       biPerms = extractBIntFuncs bothBPerms
-       bsPerms = extractBStringFuncs bothBPerms
-       -- Plug the current operators into the current list of stack operations.
-       stackInt = replaceOperators stackOpList uiPerms biPerms
-       stackString = replaceOperators stackOpList usPerms bsPerms
+   allStackOps >>= \stackOpList ->
+   let (numUnOps, numBinOps, numVals) = tallyStackOpTypes stackOpList
+       allUnBinPerms = [(u, b) |
+                        u <- genUnaryPerms numUnOps,
+                        b <- genBinaryPerms numBinOps]
+       allInputPerms = filter (\(_, sp) -> length sp == numVals) $ memoizedInputPerms !! numVals
    in
+    -- Iterate over both sets of unary operators and both sets of
+    -- binary operators.
+    partitionList numThreads allUnBinPerms `pbind` \someUnBinPerms ->
+    someUnBinPerms >>= \(bothUPerms, bothBPerms) ->
+    let uiPerms = extractUIntFuncs bothUPerms
+        usPerms = extractUStringFuncs bothUPerms
+        biPerms = extractBIntFuncs bothBPerms
+        bsPerms = extractBStringFuncs bothBPerms
+        -- Plug the current operators into the current list of stack operations.
+        stackInt = replaceOperators stackOpList uiPerms biPerms
+        stackString = replaceOperators stackOpList usPerms bsPerms
+    in
      -- Iterate over all permutations of the inputs.
      allInputPerms >>= \(iiPerms, isPerms) ->
      -- Succeed if every input row produces the corresponding output value.
