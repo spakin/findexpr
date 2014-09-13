@@ -92,14 +92,14 @@ replaceOperators (Pop2Push1 _ : os) us (b:bs) = (Pop2Push1 b) : replaceOperators
 -- the stack operations on the values, producing a single, final
 -- value.
 evaluateStack :: [StackOp (a -> a) (a -> a -> a)] -> [a] -> a
-evaluateStack ops values = head $ evaluateStack' ops values []
-  where evaluateStack' (Push1 : os) (v:vs) st =
-          evaluateStack' os vs (v:st)
-        evaluateStack' (Pop1Push1 u : os) vs (s:ss) =
-          let us = u s in us `seq` evaluateStack' os vs (us:ss)
-        evaluateStack' (Pop2Push1 b : os) vs (s2:s1:ss) =
-          let bss = b s1 s2 in bss `seq` evaluateStack' os vs (bss:ss)
-        evaluateStack' [] _ st = st
+evaluateStack (Push1 : ops) (v:vs) = evaluateStack' ops vs v []
+  where evaluateStack' (Push1 : os) (v:vs) s ss =
+          evaluateStack' os vs v (s:ss)
+        evaluateStack' (Pop1Push1 u : os) vs s ss =
+          let us = u s in us `seq` evaluateStack' os vs us ss
+        evaluateStack' (Pop2Push1 b : os) vs s2 (s1:ss) =
+          let bss = b s1 s2 in bss `seq` evaluateStack' os vs bss ss
+        evaluateStack' [] _ s _ = s
 
 -- | Tally the number of unary, binary, and value nodes in a list of
 -- stack operations.

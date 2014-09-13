@@ -4,7 +4,7 @@
 ##########################################
 
 HS = ghc
-HSOPTS = -O -threaded -feager-blackholing -rtsopts -with-rtsopts="-K2G -N"
+HSOPTS = -O -optc-O3 -threaded -feager-blackholing -rtsopts -with-rtsopts="-K2G -N"
 
 PROGRAM = findexpr
 SOURCES = Main.hs ParseInput.hs StackGen.hs FindExpr.hs
