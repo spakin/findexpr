@@ -83,10 +83,14 @@ allStackOps =
 -- | Substitute all unary and binary operators in a list of stack
 -- operations with the values provided.
 replaceOperators :: [StackOp p q] -> [u] -> [v] -> [StackOp u v]
-replaceOperators [] _ _ = []
-replaceOperators (Push1:os) us bs = Push1 : replaceOperators os us bs
-replaceOperators (Pop1Push1 _ : os) (u:us) bs = (Pop1Push1 u) : replaceOperators os us bs
-replaceOperators (Pop2Push1 _ : os) us (b:bs) = (Pop2Push1 b) : replaceOperators os us bs
+replaceOperators ss us bs = reverse $ replaceOperators' ss us bs []
+  where replaceOperators' (Push1:os) us bs st =
+          replaceOperators' os us bs (Push1:st)
+        replaceOperators' (Pop1Push1 _ : os) (u:us) bs st =
+          replaceOperators' os us bs (Pop1Push1 u : st)
+        replaceOperators' (Pop2Push1 _ : os) us (b:bs) st =
+          replaceOperators' os us bs (Pop2Push1 b : st)
+        replaceOperators' [] _ _ st = st
 
 -- | Given a list of stack operations and a list of values, perform
 -- the stack operations on the values, producing a single, final
