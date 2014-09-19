@@ -22,13 +22,6 @@ module StackGen ( StackOp(..)
 
 import Data.List
 
--- | Represent a tree with values at the leaves and unary and binary
--- operators at internal nodes.
-data Tree u b = Val                        -- ^ A value at a leaf of the tree
-          | UnOp u (Tree u b)              -- ^ A unary operator applied to a subtree
-          | BinOp b (Tree u b) (Tree u b)  -- ^ A binary operator applied to two subtrees
-          deriving Show
-
 -- | A 'PathStep' is a step toward the east, north, or northeast.
 data PathStep = E | N | NE
               deriving (Eq, Show)
@@ -46,39 +39,25 @@ schroederPaths w h =
         goE  = [E:ps  | ps <- schroederPaths (w - 1) h]
         goNE = [NE:ps | ps <- schroederPaths (w - 1) (h - 1)]
 
--- | Convert a Schr&#x00F6;der path to a binary tree.
-pathToTree :: [PathStep] -> Tree () ()
-pathToTree ps = fst $ pathToTree' ps
-  where pathToTree' :: [PathStep] -> (Tree () (), [PathStep])
-        pathToTree' [] = (Val, [])
-        pathToTree' (NE:ps) = (UnOp () childTree, restOfPath)
-          where (childTree, restOfPath) = pathToTree' ps
-        pathToTree' (E:ps) = (BinOp () leftTree rightTree, restOfPath)
-          where (leftTree, leftRemainder) = pathToTree' ps
-                (rightTree, restOfPath) = pathToTree' leftRemainder
-        pathToTree' (N:ps) = (Val, ps)
-
 -- | A 'StackOp' represents a single operation to perform on a stack.
 data StackOp u b = Push1        -- ^ Push a value on the stack
                  | Pop1Push1 u  -- ^ Pop a value, apply a unary operator, and push the result
                  | Pop2Push1 b  -- ^ Pop two values, apply a binary operator, and push the result
                  deriving Show
 
--- | Convert a 'Tree' to a list of 'StackOp's via a postfix traversal.
-treeToStackOps :: (Tree u b) -> [StackOp u b]
-treeToStackOps tree = (reverse . treeToStackOps') tree
-  where treeToStackOps' Val = [Push1]
-        treeToStackOps' (UnOp u t) = (Pop1Push1 u):treeToStackOps' t
-        treeToStackOps' (BinOp b t1 t2) = (Pop2Push1 b):t2' ++ t1'
-          where t1' = treeToStackOps' t1
-                t2' = treeToStackOps' t2
+-- | Convert a Schr&#x00F6;der path to a list of 'StackOp's.
+pathToStackOps :: [PathStep] -> [StackOp () ()]
+pathToStackOps steps = Push1 : (map stepToOp steps)
+  where stepToOp E  = Push1
+        stepToOp NE = Pop1Push1 ()
+        stepToOp N  = Pop2Push1 ()
 
 -- | Return a list of all lists of stack operations in nondecreasing
 -- order of operator count (&#x2248; complexity).
 allStackOps :: [[StackOp () ()]]
 allStackOps =
   let allSchroederPaths = concat [schroederPaths e e | e <- [0..]]
-  in  [(treeToStackOps . pathToTree) p | p <- allSchroederPaths]
+  in map pathToStackOps allSchroederPaths
 
 -- | Substitute all unary and binary operators in a list of stack
 -- operations with the values provided.
