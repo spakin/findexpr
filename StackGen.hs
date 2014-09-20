@@ -55,9 +55,7 @@ pathToStackOps steps = Push1 : (map stepToOp steps)
 -- | Return a list of all lists of stack operations in nondecreasing
 -- order of operator count (&#x2248; complexity).
 allStackOps :: [[StackOp () ()]]
-allStackOps =
-  let allSchroederPaths = concat [schroederPaths e e | e <- [0..]]
-  in map pathToStackOps allSchroederPaths
+allStackOps = concat [map pathToStackOps $ schroederPaths e e | e <- [0..]]
 
 -- | Substitute all unary and binary operators in a list of stack
 -- operations with the values provided.
