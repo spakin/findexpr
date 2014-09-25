@@ -34,7 +34,7 @@ schroederPaths w h =
   case (w, h) of
     (0, 0)    -> [[]]
     (0, _)    -> goN
-    otherwise -> goNE ++ goE ++ (if w < h then goN else [])
+    otherwise -> (if w < h then goN else []) ++ goE ++ goNE
   where goN  = [N:ps  | ps <- schroederPaths w (h - 1)]
         goE  = [E:ps  | ps <- schroederPaths (w - 1) h]
         goNE = [NE:ps | ps <- schroederPaths (w - 1) (h - 1)]
