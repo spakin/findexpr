@@ -5,6 +5,8 @@
 
 HS = ghc
 HSOPTS = -O -optc-O3 -threaded -feager-blackholing -rtsopts -with-rtsopts="-K2G -N"
+HADDOCK = haddock
+HADDOCK_OPTS = --html --ignore-all-exports
 
 PROGRAM = findexpr
 SOURCES = Main.hs ParseInput.hs StackGen.hs FindExpr.hs
@@ -16,7 +18,11 @@ all: $(PROGRAM)
 $(PROGRAM): $(SOURCES)
 	$(HS) $(HSOPTS) --make $(SOURCES) -o $(PROGRAM)
 
+doc:
+	$(HADDOCK) $(HADDOCK_OPTS) --odir=doc $(SOURCES)
+
 clean:
 	$(RM) $(PROGRAM) $(OBJECTS) $(IFACES)
+	$(RM) -r doc
 
-.PHONY: all clean
+.PHONY: all doc clean
