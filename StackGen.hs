@@ -52,10 +52,41 @@ pathToStackOps steps = Push1 : (map stepToOp steps)
         stepToOp NE = Pop1Push1 ()
         stepToOp N  = Pop2Push1 ()
 
+-- | Return every other element of a list, starting with the first, as
+-- in the following examples:
+--
+-- >>> everyOther "steadfastness"
+-- "sedates"
+-- >>> (everyOther . tail) "fruitfulness"
+-- "rifles"
+everyOther :: [a] -> [a]
+everyOther (e:o:xs) = e : everyOther xs
+everyOther [e] = [e]
+everyOther _ = []
+
+-- | Perform a single riffle shuffle of a list.  That is, return the
+-- concatenation of all elements at even-numbered positions and all
+-- elements at odd-numbered positions.  Consider the following
+-- examples:
+--
+-- >>> riffle [1..20]
+-- [1,3,5,7,9,11,13,15,17,19,2,4,6,8,10,12,14,16,18,20]
+-- >>> (riffle . riffle) [1..20]
+-- [1,5,9,13,17,2,6,10,14,18,3,7,11,15,19,4,8,12,16,20]
+riffle :: [a] -> [a]
+riffle lst@(x:xs) = evens ++ odds
+  where evens = everyOther lst
+        odds = (everyOther . tail) lst
+riffle [] = []
+
 -- | Return a list of all lists of stack operations in nondecreasing
--- order of operator count (&#x2248; complexity).
+-- order of operator count (&#x2248; complexity).  For a given
+-- operator count, lists are returned in arbitrary order (in fact,
+-- based on three riffle shuffles on the output from
+-- 'schroederPaths').
 allStackOps :: [[StackOp () ()]]
-allStackOps = concat [map pathToStackOps $ schroederPaths e e | e <- [0..]]
+allStackOps = concat [riffle3 . map pathToStackOps $ schroederPaths e e | e <- [0..]]
+  where riffle3 = riffle . riffle . riffle
 
 -- | Substitute all unary and binary operators in a list of stack
 -- operations with the values provided.
