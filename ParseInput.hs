@@ -16,6 +16,10 @@ binary ops: /b/&#x2081; /b/&#x2082; &#x2026;
 
 constants: /c/&#x2081; /c/&#x2082; &#x2026;
 
+allow reps: yes | no
+
+require all: yes | no
+
 solutions: /s/
 
 columns: /i/&#x2081; /i/&#x2082; &#x2026; => /o/&#x2081; /o/&#x2082; &#x2026;
@@ -571,4 +575,4 @@ validateInputs uFuncs bFuncs cVals reps allV solns cNames dTable =
                                      Just nums -> nums
         constColNames = map show constantVals
         dataVals = map (\(is, os) -> (is ++ constantVals, os)) dTable
-        booleanInputs = all allBits inputRows
+        booleanInputs = all allBits (inputRows ++ outputRows)
