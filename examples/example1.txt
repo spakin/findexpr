@@ -1,5 +1,5 @@
-# Find a function that maps each of the permutations of {1, 2, 3} to a
-# distinct integer in the range {1, ..., 6}.
+# Find a function that maps each of the permutations of {1, 2, 3}
+# to a distinct integer in the range {1, ..., 6}.
 
 unary ops:  - abs
 binary ops: + - * /

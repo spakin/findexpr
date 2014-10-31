@@ -36,11 +36,13 @@ Ta da!  Of course, **findexpr** is designed to solve much trickier problems.  Fo
 
 **findexpr** provides control over the set of allowable operators, the set of constants that can be used, whether each input can be used more than once or not at all, and the number of alternative solutions desired.
 
-Alas **findexpr** has two main limitations:
+Alas **findexpr** has a few limitations:
 
 1. It works only with integers, not floating-point numbers.
 
-2. It can be sloooooooooow.
+2. It does not simplify its output (i.e., there are often too many parentheses).
+
+3. It can be sloooooooooow.
 
 The slowness comes from **findexpr** using a brute-force algorithm to solve for the mystery function.  To make up for that, the **findexpr** implementation is multithreaded so the more CPU cores you have, the faster it'll run.
 
