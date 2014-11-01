@@ -6,9 +6,9 @@ findexpr
 given integer inputs and outputs, solve for the function
 --------------------------------------------------------
 
-:Author: Scott Pakin <scott-fexpr@pakin.org>
-:Date:   2014-10-26
-:Version: 1.0
+:Author:         Scott Pakin <scott-fexpr@pakin.org>
+:Date:           2014-10-31
+:Version:        1.0
 :Manual section: 1
 :Manual group:
 
@@ -281,6 +281,35 @@ no          yes          ((1 + 2) + 3) * 4
 yes         no           (2 + 4) * 4
 yes         yes          ((1 + 2) + 3) * 4
 ==========  ===========  =================
+
+
+Boolean expressions
+-------------------
+
+Although non-brute-force solutions exist for Boolean expressions,
+**findexpr** can nevertheless handle such inputs::
+
+    0 0 => 1
+    0 1 => 0
+    1 0 => 0
+    1 1 => 1
+
+Because all of the inputs and all of the outputs are in the set {0,
+1}, **findexpr** searches for a Boolean function and finds ``f1(a,b) =
+(a xor b) xor 1``.  If this is not what was desired, **findexpr** can
+be instructed to consider only non-Boolean unary and binary operators
+in its search::
+
+    unary ops: - abs sgn
+    binary ops: + * - / ^ mod max min
+
+    0 0 => 1
+    0 1 => 0
+    1 0 => 0
+    1 1 => 1
+
+**findexpr** now finds a completely different solution:
+``f1(a,b) = ((a + a) ^ b) - a``.
 
 
 Speeding up complex queries
