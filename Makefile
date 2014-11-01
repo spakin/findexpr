@@ -26,14 +26,14 @@ all: findexpr
 findexpr: $(SOURCES)
 	$(HS) $(HSOPTS) --make $(SOURCES) -o findexpr
 
-findexpr.1: documentation.txt
-	rst2man documentation.txt > findexpr.1
+findexpr.1: userguide.txt
+	rst2man userguide.txt > findexpr.1
 
 devel-doc: $(SOURCES)
 	$(HADDOCK) $(HADDOCK_OPTS) --odir=devel-doc $(SOURCES)
 
 install: all findexpr.1
-	$(INSTALL) -d -m 0755 $(DESTDIR)$(bindir)/findexpr
+	$(INSTALL) -d -m 0755 $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 findexpr $(DESTDIR)$(bindir)/findexpr
 	$(INSTALL) -d -m 0755 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 findexpr.1 $(DESTDIR)$(man1dir)/findexpr.1
@@ -44,11 +44,11 @@ uninstall:
 
 dist: findexpr-$(VERSION).tar.gz
 
-findexpr-$(VERSION).tar.gz: Makefile $(SOURCES) documentation.txt findexpr.1
+findexpr-$(VERSION).tar.gz: Makefile $(SOURCES) userguide.txt findexpr.1
 	$(RM) -r findexpr-$(VERSION)
 	$(INSTALL) -d -m 0755 findexpr-$(VERSION)
 	$(INSTALL) -m 0755 Makefile $(SOURCES) findexpr-$(VERSION)
-	$(INSTALL) -m 0755 documentation.txt findexpr.1 findexpr-$(VERSION)
+	$(INSTALL) -m 0755 userguide.txt findexpr.1 findexpr-$(VERSION)
 	tar -czvf findexpr-$(VERSION).tar.gz findexpr-$(VERSION)
 	$(RM) -r findexpr-$(VERSION)
 

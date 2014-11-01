@@ -7,7 +7,7 @@ given integer inputs and outputs, solve for the function
 --------------------------------------------------------
 
 :Author:         Scott Pakin <scott-fexpr@pakin.org>
-:Date:           2014-10-31
+:Date:           2014-11-01
 :Version:        1.0
 :Manual section: 1
 :Manual group:
