@@ -5,34 +5,58 @@
 
 prefix = /usr/local
 bindir = $(prefix)/bin
+datarootdir = $(prefix)/share
+mandir = $(datarootdir)/man
+man1dir = $(mandir)/man1
+
+VERSION = 1.0
 
 HS = ghc
 HSOPTS = -O -optc-O3 -threaded -feager-blackholing -rtsopts -with-rtsopts="-K2G -N"
 HADDOCK = haddock
 HADDOCK_OPTS = --html --ignore-all-exports
 
-PROGRAM = findexpr
 SOURCES = Main.hs ParseInput.hs StackGen.hs FindExpr.hs
 OBJECTS = $(patsubst %.hs,%.o,$(SOURCES))
 IFACES = $(patsubst %.hs,%.hi,$(SOURCES))
 INSTALL = install
 
-all: $(PROGRAM)
+all: findexpr
 
-$(PROGRAM): $(SOURCES)
-	$(HS) $(HSOPTS) --make $(SOURCES) -o $(PROGRAM)
+findexpr: $(SOURCES)
+	$(HS) $(HSOPTS) --make $(SOURCES) -o findexpr
 
-doc:
-	$(HADDOCK) $(HADDOCK_OPTS) --odir=doc $(SOURCES)
+findexpr.1: documentation.txt
+	rst2man documentation.txt > findexpr.1
 
-install: all
-	$(INSTALL) -D -m 0755 $(PROGRAM) $(DESTDIR)$(bindir)/$(PROGRAM)
+devel-doc: $(SOURCES)
+	$(HADDOCK) $(HADDOCK_OPTS) --odir=devel-doc $(SOURCES)
+
+install: all findexpr.1
+	$(INSTALL) -d -m 0755 $(DESTDIR)$(bindir)/findexpr
+	$(INSTALL) -m 0755 findexpr $(DESTDIR)$(bindir)/findexpr
+	$(INSTALL) -d -m 0755 $(DESTDIR)$(man1dir)
+	$(INSTALL) -m 0644 findexpr.1 $(DESTDIR)$(man1dir)/findexpr.1
 
 uninstall:
-	$(RM) $(DESTDIR)$(bindir)/$(PROGRAM)
+	$(RM) $(DESTDIR)$(bindir)/findexpr
+	$(RM) $(DESTDIR)$(man1dir)/findexpr.1
+
+dist: findexpr-$(VERSION).tar.gz
+
+findexpr-$(VERSION).tar.gz: Makefile $(SOURCES) documentation.txt findexpr.1
+	$(RM) -r findexpr-$(VERSION)
+	$(INSTALL) -d -m 0755 findexpr-$(VERSION)
+	$(INSTALL) -m 0755 Makefile $(SOURCES) findexpr-$(VERSION)
+	$(INSTALL) -m 0755 documentation.txt findexpr.1 findexpr-$(VERSION)
+	tar -czvf findexpr-$(VERSION).tar.gz findexpr-$(VERSION)
+	$(RM) -r findexpr-$(VERSION)
 
 clean:
-	$(RM) $(PROGRAM) $(OBJECTS) $(IFACES)
-	$(RM) -r doc
+	$(RM) findexpr $(OBJECTS) $(IFACES)
+	$(RM) -r devel-doc findexpr-$(VERSION)
 
-.PHONY: all doc clean
+maintainer-clean: clean
+	$(RM) findexpr.1
+
+.PHONY: all clean maintainer-clean install uninstall dist
