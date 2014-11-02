@@ -7,7 +7,7 @@ given integer inputs and outputs, solve for the function
 --------------------------------------------------------
 
 :Author:         Scott Pakin <scott-fexpr@pakin.org>
-:Date:           2014-11-01
+:Date:           2014-11-02
 :Version:        1.0
 :Manual section: 1
 :Manual group:
@@ -173,7 +173,7 @@ Algorithm
 expression.  The algorithm looks roughly like this:
 
 | **for each** output column
-|   **for each** *o1* **in** 0 **to** infinity
+|   **for each** *o1* **in** 0 **to** ∞
 |     **for each** expression containing exactly *o1* operators
 |       **for each** way of populating the expression with the given unary and binary operators
 |         **for each** permutation of the input columns
@@ -287,7 +287,7 @@ Boolean expressions
 -------------------
 
 Although non-brute-force solutions exist for Boolean expressions,
-**findexpr** can nevertheless handle such inputs::
+**findexpr** can nevertheless handle such inputs, albeit slower::
 
     0 0 => 1
     0 1 => 0
@@ -358,10 +358,9 @@ operators (``-``, ``abs``, and ``sgn``) because the inputs and outputs
 are all positive.  We also observe the cyclic nature of the outputs as
 a function of the inputs, which increase steadily by 1, and
 hypothesize that we need ``mod``, perhaps ``+``, ``*``, ``-``, and/or
-``/``—at least, we can't rule them out—but probably not ``^``,
-``max`` or ``min``.  We explicitly specify the unary and binary
-operators to consider and in decreasing order of likelihood of being
-used::
+``/`` but probably not ``^``, ``max`` or ``min``.  We explicitly
+specify the unary and binary operators to consider and in decreasing
+order of likelihood of being used::
 
     unary ops:
     binary ops: mod + * - /
@@ -478,9 +477,9 @@ expressions is the `Maxima computer algebra system
 Maxima reduces the output from the first example in this document::
 
     (%i1) a - ((floor(c / (b + 1))) - a);
-						c
+                                                c
     (%o1)                         2 a - floor(-----)
-					      b + 1
+                                              b + 1
 
 
 Copyright and license
