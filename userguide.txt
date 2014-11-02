@@ -25,23 +25,24 @@ Description
 **findexpr** finds a function that maps a list of input integers to an
 output integer.  For example, if told that *f*\ (3, 5) = 8, it can
 conclude that *f*\ (*a*, *b*) = *a* + *b*.  As a more complex example,
-consider the following set of three inputs and one function output:
+consider the following set of three function inputs and one function
+output:
 
-+---+---+---+----------+
-| a | b | c | f(a,b,c) |
-+===+===+===+==========+
-| 1 | 2 | 3 |    1     |
-+---+---+---+----------+
-| 1 | 3 | 2 |    2     |
-+---+---+---+----------+
-| 2 | 1 | 3 |    3     |
-+---+---+---+----------+
-| 2 | 3 | 1 |    4     |
-+---+---+---+----------+
-| 3 | 1 | 2 |    5     |
-+---+---+---+----------+
-| 3 | 2 | 1 |    6     |
-+---+---+---+----------+
++-----+-----+-----+----------------------+
+| *a* | *b* | *c* | *f*\ (*a*, *b*, *c*) |
++=====+=====+=====+======================+
+|  1  |  2  |  3  |          1           |
++-----+-----+-----+----------------------+
+|  1  |  3  |  2  |          2           |
++-----+-----+-----+----------------------+
+|  2  |  1  |  3  |          3           |
++-----+-----+-----+----------------------+
+|  2  |  3  |  1  |          4           |
++-----+-----+-----+----------------------+
+|  3  |  1  |  2  |          5           |
++-----+-----+-----+----------------------+
+|  3  |  2  |  1  |          6           |
++-----+-----+-----+----------------------+
 
 In this case (provided as ``example1.txt`` in the ``examples``
 directory), **findexpr** determines that *f*\ (*a*, *b*, *c*) = *a* -
@@ -128,13 +129,14 @@ appear in the order shown below.
     along with all of the input values.  The default is ``1``.
 
 ``allow reps``
-    Whether to allow repetitions of input values and constants.  Must
-    be one of the following:
+    Whether to allow repetitions of input values and constants in the
+    output function.  Must be one of the following:
 
-      * ``yes``: Each input value and constant can be used multiple
-        times in the target function (e.g., *f*\ (*a*) = *a* + *a*).
+      * ``yes``: Solutions like *f*\ (*a*) = *a* + *a*) are allowed.
 
-      * ``no``: Each input value and constant can be used exactly once.
+      * ``no``: A solution like *f*\ (*a*) = *a* + *a*) is forbidden
+        because *a* is used more than once in the definition of *f*\
+        (*a*).
 
     The default is ``yes``.
 
@@ -143,7 +145,8 @@ appear in the order shown below.
     corresponding output.  Must be one of the following:
 
       * ``yes``: A solution like *f*\ (*a*, *b*, *c*) = *b* - 1 is
-        forbidden because *f* ignores *a* and *c*.
+        forbidden because the definition of *f*\ (*a*, *b*, *c*)
+        ignores *a* and *c*.
 
       * ``no``: Solutions like *f*\ (*a*, *b*, *c*) = *b* - 1 are
         allowed.
