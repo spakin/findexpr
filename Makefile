@@ -9,7 +9,7 @@ datarootdir = $(prefix)/share
 mandir = $(datarootdir)/man
 man1dir = $(mandir)/man1
 
-VERSION = 1.0
+VERSION = 1.0.1
 
 HS = ghc
 HSOPTS = -O -optc-O3 -threaded -feager-blackholing -rtsopts -with-rtsopts="-K2G -N"
@@ -48,7 +48,7 @@ findexpr-$(VERSION).tar.gz: Makefile $(SOURCES) userguide.txt findexpr.1
 	$(RM) -r findexpr-$(VERSION)
 	$(INSTALL) -d -m 0755 findexpr-$(VERSION)
 	$(INSTALL) -m 0755 Makefile $(SOURCES) findexpr-$(VERSION)
-	$(INSTALL) -m 0755 userguide.txt findexpr.1 findexpr-$(VERSION)
+	$(INSTALL) -m 0644 userguide.txt findexpr.1 README.md findexpr-$(VERSION)
 	tar -czvf findexpr-$(VERSION).tar.gz findexpr-$(VERSION)
 	$(RM) -r findexpr-$(VERSION)
 
