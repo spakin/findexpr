@@ -85,11 +85,15 @@ instance Show UnaryOperator where
 -- | Associate names with unary functions.
 unaryTable :: [UnaryOperator]
 unaryTable =
-  map UnaryOperator [("-",   liftM negate, stringPrefix "-",   [ArithmeticOp]),
+  map UnaryOperator [("-",   liftM negate, stringNegate,       [ArithmeticOp]),
                      ("abs", liftM abs,    stringPrefix "abs", [ArithmeticOp]),
                      ("sgn", liftM signum, stringPrefix "sgn", [ArithmeticOp]),
                      ("not", not1Bit,      stringPrefix "not", [BitwiseOp])]
   where stringPrefix p s = p ++ "(" ++ s ++ ")"
+        stringNegate s =
+          "(" ++
+          (if all isDigit s then "-" ++ s else stringPrefix "-" s) ++
+          ")"
         not1Bit (Just 0) = Just 1
         not1Bit (Just 1) = Just 0
         not1Bit _        = Nothing
