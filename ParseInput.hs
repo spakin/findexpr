@@ -165,6 +165,7 @@ binaryTable =
                       ("and",  safeBool (.&.), stringOp "and",     [BitwiseOp]),
                       ("or",   safeBool (.|.), stringOp "or",      [BitwiseOp]),
                       ("xor",  safeBool xor,   stringOp "xor",     [BitwiseOp]),
+                      ("xnor", xnor1Bit,       stringOp "xnor",    [BitwiseOp]),
                       ("nand", nand1Bit,       stringOp "nand",    [BitwiseOp]),
                       ("nor",  nor1Bit,        stringOp "nor",     [BitwiseOp])]
   where stringOp opStr a b = (maybeParens a) ++ " " ++ opStr ++ " " ++ (maybeParens b)
@@ -204,6 +205,11 @@ nor1Bit (Just 0) (Just 0) = Just 1
 nor1Bit (Just 1) (Just _) = Just 0
 nor1Bit (Just _) (Just 1) = Just 0
 nor1Bit _        _        = Nothing
+
+-- | Define an XNOR function on single-bit integers.
+xnor1Bit :: Maybe Int -> Maybe Int -> Maybe Int
+xnor1Bit = safeBool xnor1Bit'
+  where xnor1Bit' a b = (a `xor` b) `xor` 1
 
 -- | Given a 'BinaryOperator' and a parser that produces a
 -- 'BinaryOperator', return a new parser that matches the name of the
