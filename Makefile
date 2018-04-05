@@ -9,7 +9,7 @@ datarootdir = $(prefix)/share
 mandir = $(datarootdir)/man
 man1dir = $(mandir)/man1
 
-VERSION = 1.0.1
+VERSION = 1.1
 
 HS = ghc
 HSOPTS = -O -optc-O3 -threaded -feager-blackholing -rtsopts -with-rtsopts="-K2G -N"

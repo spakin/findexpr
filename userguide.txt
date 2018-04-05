@@ -7,8 +7,8 @@ given integer inputs and outputs, solve for the function
 --------------------------------------------------------
 
 :Author:         Scott Pakin <scott-fexpr@pakin.org>
-:Date:           2014-11-02
-:Version:        1.0.1
+:Date:           2018-04-05
+:Version:        1.1
 :Manual section: 1
 :Manual group:
 
@@ -119,10 +119,12 @@ appear in the order shown below.
       * ``xor``: Boolean exclusive disjunction
       * ``nand``: negated Boolean conjunction
       * ``nor``: negated Boolean inclusive disjunction
+      * ``xnor``: negated Boolean exclusive disjunction
 
-    The default is ``and or xor nand nor`` when all inputs and outputs
-    are either ``0`` or ``1`` and ``+ * - / ^ mod max min`` otherwise.
-    Binary operators are considered in the order specified.
+    The default is ``and or xor nand nor xnor`` when all inputs and
+    outputs are either ``0`` or ``1`` and ``+ * - / ^ mod max min``
+    otherwise.  Binary operators are considered in the order
+    specified.
 
 ``constants``
     List of constant integers to consider (in the order specified)
@@ -488,7 +490,7 @@ Maxima reduces the output from the first example in this document::
 Copyright and license
 =====================
 
-Copyright © 2014, Scott Pakin
+Copyright © 2018, Scott Pakin
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
